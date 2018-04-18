@@ -13,6 +13,7 @@ import Page.Login as Login
 import Page.NotFound as NotFound
 import Page.WindowArena as WindowArena
 import Ports
+import Request.User
 import Route exposing (Route)
 import Settings exposing (Settings)
 import Task
@@ -50,6 +51,7 @@ type alias Model =
     { session : Session
     , pageState : PageState
     , settings : Settings
+    , location : Location
     }
 
 
@@ -69,21 +71,33 @@ init val location =
 
         _ =
             Debug.log "corrected settings: " correctedSettings
-    in
-    case settings.dbUrl of
-        Just dbUrl ->
-            setRoute (Route.fromLocation location)
-                { pageState = Loaded initialPage
-                , session = { user = decodeUserFromJson val }
-                , settings = Settings.fromJson val
-                }
 
-        Nothing ->
-            setRoute (Just Route.Login)
-                { pageState = Loaded initialPage
-                , session = { user = decodeUserFromJson val }
-                , settings = Settings.fromJson val
-                }
+        dbUrlCmd : Cmd (Maybe String)
+        dbUrlCmd =
+            Task.attempt
+                (\r ->
+                    case r of
+                        Ok r ->
+                            Just r
+
+                        Err e ->
+                            Nothing
+                )
+                (Request.User.dbUrl
+                    correctedSettings
+                )
+
+        model =
+            { pageState = Loaded initialPage
+            , session = { user = decodeUserFromJson val }
+            , settings = correctedSettings
+            , location = location
+            }
+
+        setDbUrlCmd =
+            Cmd.map (\a -> SetDbUrl a) dbUrlCmd
+    in
+    model => Cmd.batch [ setDbUrlCmd ]
 
 
 decodeUserFromJson : Value -> Maybe User
@@ -214,13 +228,14 @@ type Msg
     | SetUser (Maybe User)
     | LoginMsg Login.Msg
     | WindowMsg Window.Msg
+    | SetDbUrl (Maybe String)
 
 
 setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
 setRoute maybeRoute model =
     let
         _ =
-            Debug.log "setting route"
+            Debug.log "setting route" maybeRoute
 
         settings =
             model.settings
@@ -242,8 +257,16 @@ setRoute maybeRoute model =
 
         errored =
             pageErrored model
+
+        correctedRoute =
+            case settings.dbUrl of
+                Just dbUrl ->
+                    maybeRoute
+
+                Nothing ->
+                    Just Route.Login
     in
-    case maybeRoute of
+    case correctedRoute of
         Nothing ->
             { model | pageState = Loaded NotFound } => Cmd.none
 
@@ -354,6 +377,24 @@ updatePage page msg model =
 
         ( WindowMsg subMsg, Window subModel ) ->
             toPage Window WindowMsg (Window.update model.session) subMsg subModel
+
+        ( SetDbUrl dbUrl, _ ) ->
+            let
+                _ =
+                    Debug.log "Setting db_url " dbUrl
+
+                updatedModel =
+                    { model
+                        | settings =
+                            case dbUrl of
+                                Just dbUrl ->
+                                    Settings.setDbUrl model.settings dbUrl
+
+                                Nothing ->
+                                    model.settings
+                    }
+            in
+            setRoute (Route.fromLocation updatedModel.location) updatedModel
 
         ( _, NotFound ) ->
             -- Disregard incoming messages when we're on the

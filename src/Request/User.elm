@@ -1,4 +1,4 @@
-module Request.User exposing (login)
+module Request.User exposing (dbUrl, login)
 
 import Data.AuthToken as AuthToken exposing (AuthToken, withAuthorization)
 import Data.User as User exposing (User)
@@ -11,6 +11,7 @@ import Ports
 import Request.Helpers exposing (apiUrl)
 import Request.Window.Records exposing (header)
 import Settings exposing (Settings)
+import Task exposing (Task)
 import Util exposing ((=>))
 
 
@@ -29,3 +30,15 @@ login settings =
         |> header settings
         |> HttpBuilder.withExpect expect
         |> HttpBuilder.toRequest
+
+
+dbUrl : Settings -> Task Http.Error String
+dbUrl settings =
+    let
+        expect =
+            Decode.string
+                |> Http.expectJson
+    in
+    apiUrl settings "/db_url"
+        |> Http.getString
+        |> Http.toTask
