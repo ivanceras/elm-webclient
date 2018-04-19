@@ -1100,3 +1100,7 @@ a.primary-link {
     width: 80px;
     cursor: pointer;
 }
+
+.view-link-rows {
+    height: 30px;
+}

@@ -7,6 +7,7 @@ module Views.Window.Field
         , editedValue
         , init
         , isModified
+        , listRecordToListString
         , update
         , view
         )

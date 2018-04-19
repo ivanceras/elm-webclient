@@ -34,6 +34,7 @@ import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
 import Task exposing (Task)
 import Util exposing ((=>), Scroll, onScroll, px, viewIf)
 import Views.Window.Field as Field
+import Views.Window.LinkRow as LinkRow
 import Views.Window.Row as Row
 import Views.Window.Searchbox as Searchbox
 import Views.Window.Toolbar as Toolbar
@@ -45,6 +46,7 @@ type alias Model =
     , scroll : Scroll
     , size : ( Float, Float )
     , pageRows : List (List Row.Model)
+    , linkRows : List LinkRow.Model
     , pageRequestInFlight : Bool
     , currentPage : Int
     , reachedLastPage : Bool
@@ -83,6 +85,7 @@ init selectedRecordId size query tab tabType rows totalRecords =
     , scroll = Scroll 0 0
     , size = size
     , pageRows = [ createRowsModel selectedRecordId tab rows ]
+    , linkRows = []
     , pageRequestInFlight = False
     , currentPage = 1
     , reachedLastPage = False
@@ -272,7 +275,9 @@ listView lookup model =
                         , ( "width", px adjustedWidth )
                         ]
                     ]
-                    [ listViewRows lookup model ]
+                    ([ listViewRows lookup model ]
+                        ++ [ viewLinkRows lookup model ]
+                    )
                 ]
             ]
         , viewLoadingIndicator model
@@ -581,6 +586,22 @@ viewPage lookup rowList =
         )
 
 
+viewLinkRows : Lookup -> Model -> Html Msg
+viewLinkRows lookup model =
+    let
+        tab =
+            model.tab
+    in
+    div []
+        (List.map
+            (\linkRow ->
+                LinkRow.view lookup linkRow
+                    |> Html.map (LinkRowMsg linkRow)
+            )
+            model.linkRows
+        )
+
+
 listViewRows : Lookup -> Model -> Html Msg
 listViewRows lookup model =
     let
@@ -609,6 +630,7 @@ type Msg
     | RefreshPageReceived Rows
     | RefreshPageError String
     | RowMsg Row.Model Row.Msg
+    | LinkRowMsg LinkRow.Model LinkRow.Msg
     | SearchboxMsg Searchbox.Model Searchbox.Msg
     | ToggleSelectAllRows Bool
     | ToolbarMsg Toolbar.Msg
@@ -700,6 +722,26 @@ update msg model =
             in
             { model | pageRows = pageRows } => Cmd.batch subCmd
 
+        LinkRowMsg argLinkRow linkRowMsg ->
+            let
+                ( updatedLinkRows, subCmds ) =
+                    List.map
+                        (\linkRow ->
+                            let
+                                ( updatedRow, cmd ) =
+                                    if linkRow == argLinkRow then
+                                        LinkRow.update linkRowMsg argLinkRow
+                                    else
+                                        ( linkRow, Cmd.none )
+                            in
+                            ( updatedRow, Cmd.map (LinkRowMsg argLinkRow) cmd )
+                        )
+                        model.linkRows
+                        |> List.unzip
+            in
+            { model | linkRows = updatedLinkRows }
+                => Cmd.none
+
         SearchboxMsg searchbox msg ->
             let
                 ( newSearchbox, subCmd ) =
@@ -761,6 +803,14 @@ update msg model =
             in
             { model | pageRows = updatedPageRows }
                 => Cmd.batch subCmd
+
+        ToolbarMsg Toolbar.ClickedLinkExisting ->
+            let
+                linkRow =
+                    LinkRow.init model.tab
+            in
+            { model | linkRows = model.linkRows ++ [ linkRow ] }
+                => Cmd.none
 
         ToolbarMsg toolbarMsg ->
             let

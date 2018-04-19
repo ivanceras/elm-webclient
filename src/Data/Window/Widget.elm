@@ -1,6 +1,6 @@
 module Data.Window.Widget
     exposing
-        ( Alignment
+        ( Alignment(..)
         , ControlWidget
         , Dropdown(..)
         , DropdownInfo
