@@ -3,6 +3,7 @@ module Views.Window.LinkRow exposing (..)
 import Data.Window.Field as Field exposing (Field)
 import Data.Window.Lookup as Lookup exposing (Lookup)
 import Data.Window.Tab as Tab exposing (Tab)
+import Data.Window.TableName as TableName exposing (TableName)
 import Data.Window.Widget as Widget exposing (Alignment(..), DropdownInfo)
 import Html exposing (..)
 import Html.Attributes exposing (attribute, checked, class, classList, href, id, placeholder, src, style, type_)
@@ -20,11 +21,12 @@ type alias Model =
     { tab : Tab
     , dropdownModel : DropdownDisplay.Model
     , dropdownInfo : DropdownInfo
+    , linkRowId : Int
     }
 
 
-init : Tab -> Model
-init tab =
+init : Int -> Tab -> Model
+init linkRowId tab =
     let
         widgetWidth =
             200
@@ -49,6 +51,7 @@ init tab =
     { tab = tab
     , dropdownModel = dropdownModel
     , dropdownInfo = dropdownInfo
+    , linkRowId = linkRowId
     }
 
 
@@ -88,8 +91,35 @@ update msg model =
                     DropdownDisplay.update msg model.dropdownModel
             in
             { model | dropdownModel = updatedDropdown }
-                => Cmd.none
+                => Cmd.map DropdownDisplayMsg subCmd
 
 
 type Msg
     = DropdownDisplayMsg DropdownDisplay.Msg
+
+
+dropdownPageRequestNeeded : Lookup -> Model -> Maybe TableName
+dropdownPageRequestNeeded lookup model =
+    let
+        dropdownModel =
+            model.dropdownModel
+
+        tableName =
+            model.tab.tableName
+
+        ( page, listRecord ) =
+            Lookup.tableLookup tableName lookup
+
+        dropdownInfo =
+            model.dropdownInfo
+
+        listValue =
+            Field.listRecordToListString dropdownInfo listRecord
+    in
+    if
+        DropdownDisplay.pageRequestNeeded listValue dropdownModel
+            && not (Lookup.hasReachedLastPage tableName lookup)
+    then
+        Just tableName
+    else
+        Nothing

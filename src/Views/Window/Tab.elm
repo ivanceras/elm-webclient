@@ -200,16 +200,28 @@ pageRequestNeeded model =
 
 dropdownPageRequestNeeded : Lookup -> Model -> Maybe TableName
 dropdownPageRequestNeeded lookup model =
-    List.filterMap
-        (\page ->
+    let
+        rowDropdown =
             List.filterMap
-                (\row ->
-                    Row.dropdownPageRequestNeeded lookup row
+                (\page ->
+                    List.filterMap
+                        (\row ->
+                            Row.dropdownPageRequestNeeded lookup row
+                        )
+                        page
+                        |> List.head
                 )
-                page
-                |> List.head
-        )
-        model.pageRows
+                model.pageRows
+
+        linkRowDropdown =
+            List.filterMap
+                (\linkRow ->
+                    LinkRow.dropdownPageRequestNeeded lookup linkRow
+                )
+                model.linkRows
+    in
+    rowDropdown
+        ++ linkRowDropdown
         |> List.head
 
 
@@ -275,8 +287,12 @@ listView lookup model =
                         , ( "width", px adjustedWidth )
                         ]
                     ]
-                    ([ listViewRows lookup model ]
-                        ++ [ viewLinkRows lookup model ]
+                    (if numberOfRecords model <= 10 then
+                        [ listViewRows lookup model ]
+                            ++ [ viewLinkRows lookup model ]
+                     else
+                        [ viewLinkRows lookup model ]
+                            ++ [ listViewRows lookup model ]
                     )
                 ]
             ]
@@ -730,17 +746,21 @@ update msg model =
                             let
                                 ( updatedRow, cmd ) =
                                     if linkRow == argLinkRow then
-                                        LinkRow.update linkRowMsg argLinkRow
+                                        let
+                                            _ =
+                                                Debug.log "updating this linkRow"
+                                        in
+                                        LinkRow.update linkRowMsg linkRow
                                     else
                                         ( linkRow, Cmd.none )
                             in
-                            ( updatedRow, Cmd.map (LinkRowMsg argLinkRow) cmd )
+                            ( updatedRow, Cmd.map (LinkRowMsg updatedRow) cmd )
                         )
                         model.linkRows
                         |> List.unzip
             in
             { model | linkRows = updatedLinkRows }
-                => Cmd.none
+                => Cmd.batch subCmds
 
         SearchboxMsg searchbox msg ->
             let
@@ -806,8 +826,11 @@ update msg model =
 
         ToolbarMsg Toolbar.ClickedLinkExisting ->
             let
+                linkRowId =
+                    List.length model.linkRows
+
                 linkRow =
-                    LinkRow.init model.tab
+                    LinkRow.init linkRowId model.tab
             in
             { model | linkRows = model.linkRows ++ [ linkRow ] }
                 => Cmd.none
