@@ -4,6 +4,7 @@ module Data.Window.Record
         , RecordId(..)
         , Rows
         , decoder
+        , empty
         , emptyRow
         , encoder
         , idToString
@@ -62,6 +63,10 @@ emptyRow =
 
 type alias Record =
     Dict String Value
+
+
+empty =
+    Dict.empty
 
 
 encoder : Record -> Encode.Value
@@ -134,12 +139,18 @@ rowsDecoder =
 
 type RecordId
     = RecordId (List Value)
+    | TempLocal Int
 
 
 idToString : RecordId -> String
-idToString (RecordId values) =
-    List.map Value.valueToString values
-        |> String.join ","
+idToString recordId =
+    case recordId of
+        RecordId values ->
+            List.map Value.valueToString values
+                |> String.join ","
+
+        TempLocal v ->
+            toString v
 
 
 

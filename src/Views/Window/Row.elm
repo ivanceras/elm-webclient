@@ -20,7 +20,7 @@ import Data.Window.Tab as Tab exposing (Tab)
 import Data.Window.TableName exposing (TableName)
 import Data.Window.Value as Value exposing (Value)
 import Data.Window.Widget as Widget exposing (ControlWidget)
-import Data.WindowArena as WindowArena
+import Data.WindowArena as WindowArena exposing (Action(..))
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (attribute, checked, class, classList, href, id, placeholder, src, style, type_)
@@ -72,21 +72,21 @@ isModified model =
     List.any Field.isModified model.fields
 
 
-init : Bool -> RecordId -> Record -> Tab -> Model
-init isFocused recordId record tab =
+init : Action -> Bool -> RecordId -> Record -> Tab -> Model
+init action isFocused recordId record tab =
     { selected = False
     , recordId = recordId
     , record = record
     , tab = tab
-    , fields = createFields record tab
+    , fields = createFields action record tab
     , isFocused = isFocused
     }
 
 
-createFields : Record -> Tab -> List Field.Model
-createFields record tab =
+createFields : Action -> Record -> Tab -> List Field.Model
+createFields action record tab =
     List.map
-        (Field.init 0 InList WindowArena.ListPage (Just record) tab)
+        (Field.init 0 InList action (Just record) tab)
         tab.fields
 
 

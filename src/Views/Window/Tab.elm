@@ -23,6 +23,7 @@ import Data.Window.Presentation as Presentation exposing (Presentation(..))
 import Data.Window.Record as Record exposing (Record, RecordId, Rows)
 import Data.Window.Tab as Tab exposing (Tab, TabType)
 import Data.Window.TableName as TableName exposing (TableName)
+import Data.WindowArena as WindowArena exposing (Action(..))
 import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (attribute, checked, class, classList, href, id, placeholder, property, src, style, type_)
@@ -47,6 +48,7 @@ type alias Model =
     , size : ( Float, Float )
     , pageRows : List (List Row.Model)
     , linkRows : List LinkRow.Model
+    , newRows : List Row.Model
     , pageRequestInFlight : Bool
     , currentPage : Int
     , reachedLastPage : Bool
@@ -86,6 +88,7 @@ init selectedRecordId size query tab tabType rows totalRecords =
     , size = size
     , pageRows = [ createRowsModel selectedRecordId tab rows ]
     , linkRows = []
+    , newRows = []
     , pageRequestInFlight = False
     , currentPage = 1
     , reachedLastPage = False
@@ -122,7 +125,7 @@ createRowsModel selectedRecordId tab rows =
                         Nothing ->
                             False
             in
-            Row.init isFocused recordId record tab
+            Row.init WindowArena.ListPage isFocused recordId record tab
         )
         recordList
 
@@ -219,8 +222,16 @@ dropdownPageRequestNeeded lookup model =
                     LinkRow.dropdownPageRequestNeeded lookup linkRow
                 )
                 model.linkRows
+
+        newRowDropdown =
+            List.filterMap
+                (\newRow ->
+                    Row.dropdownPageRequestNeeded lookup newRow
+                )
+                model.newRows
     in
     rowDropdown
+        ++ newRowDropdown
         ++ linkRowDropdown
         |> List.head
 
@@ -287,12 +298,9 @@ listView lookup model =
                         , ( "width", px adjustedWidth )
                         ]
                     ]
-                    (if numberOfRecords model <= 10 then
-                        [ listViewRows lookup model ]
-                            ++ [ viewLinkRows lookup model ]
-                     else
-                        [ viewLinkRows lookup model ]
-                            ++ [ listViewRows lookup model ]
+                    ([ viewNewRows lookup model ]
+                        ++ [ viewLinkRows lookup model ]
+                        ++ [ listViewRows lookup model ]
                     )
                 ]
             ]
@@ -602,6 +610,18 @@ viewPage lookup rowList =
         )
 
 
+viewNewRows : Lookup -> Model -> Html Msg
+viewNewRows lookup model =
+    div []
+        (List.map
+            (\newRow ->
+                Row.view lookup newRow
+                    |> Html.map (NewRowMsg newRow)
+            )
+            model.newRows
+        )
+
+
 viewLinkRows : Lookup -> Model -> Html Msg
 viewLinkRows lookup model =
     let
@@ -646,6 +666,7 @@ type Msg
     | RefreshPageReceived Rows
     | RefreshPageError String
     | RowMsg Row.Model Row.Msg
+    | NewRowMsg Row.Model Row.Msg
     | LinkRowMsg LinkRow.Model LinkRow.Msg
     | SearchboxMsg Searchbox.Model Searchbox.Msg
     | ToggleSelectAllRows Bool
@@ -738,6 +759,25 @@ update msg model =
             in
             { model | pageRows = pageRows } => Cmd.batch subCmd
 
+        NewRowMsg argNewRow rowMsg ->
+            let
+                ( updatedNewRows, subCmd ) =
+                    List.map
+                        (\newRow ->
+                            let
+                                ( updatedRow, cmd ) =
+                                    if newRow == argNewRow then
+                                        Row.update rowMsg newRow
+                                    else
+                                        ( newRow, Cmd.none )
+                            in
+                            ( updatedRow, Cmd.map (NewRowMsg updatedRow) cmd )
+                        )
+                        model.newRows
+                        |> List.unzip
+            in
+            { model | newRows = updatedNewRows } => Cmd.batch subCmd
+
         LinkRowMsg argLinkRow linkRowMsg ->
             let
                 ( updatedLinkRows, subCmds ) =
@@ -823,6 +863,23 @@ update msg model =
             in
             { model | pageRows = updatedPageRows }
                 => Cmd.batch subCmd
+
+        ToolbarMsg Toolbar.ClickedLinkNewRecord ->
+            let
+                newRowId =
+                    List.length model.newRows
+
+                newRecordId =
+                    Record.TempLocal newRowId
+
+                emptyRecord =
+                    Record.empty
+
+                newRow =
+                    Row.init (WindowArena.NewRecord Presentation.InList) True newRecordId emptyRecord model.tab
+            in
+            { model | newRows = model.newRows ++ [ newRow ] }
+                => Cmd.none
 
         ToolbarMsg Toolbar.ClickedLinkExisting ->
             let
