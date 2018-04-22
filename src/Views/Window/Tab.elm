@@ -17,6 +17,7 @@ import Data.Query as Query exposing (Query)
 import Data.Query.Filter as Filter
 import Data.Query.Order as Order exposing (Order)
 import Data.Query.Sort as Sort exposing (Sort)
+import Data.Window.ColumnName as ColumnName
 import Data.Window.Field as Field exposing (Field)
 import Data.Window.Lookup as Lookup exposing (Lookup)
 import Data.Window.Presentation as Presentation exposing (Presentation(..))
@@ -56,9 +57,15 @@ type alias Model =
     , isMultiSort : Bool
     , query : Query
     , selectedRecordId : Maybe RecordId
+    , unlinked : List Row.Model
     }
 
 
+{-|
+
+    return the modified rows
+
+-}
 editedRows : Model -> Rows
 editedRows model =
     let
@@ -78,6 +85,63 @@ editedRows model =
                 |> List.concat
     in
     Record.listRecordToRows columns listRecords
+
+
+{-|
+
+    return the new inserted rows
+
+-}
+getLinkNewRows : Model -> Rows
+getLinkNewRows model =
+    let
+        columns =
+            Tab.columnNames model.tab
+
+        listRecords =
+            List.map
+                (\newRow ->
+                    Row.editedRecord newRow
+                )
+                model.newRows
+    in
+    Record.listRecordToRows columns listRecords
+
+
+getLinkRows : Model -> Rows
+getLinkRows model =
+    let
+        values =
+            List.filterMap
+                (\linkRow ->
+                    LinkRow.getLinkRow linkRow
+                )
+                model.linkRows
+
+        tab =
+            model.tab
+
+        display =
+            case tab.display of
+                Just display ->
+                    display
+
+                Nothing ->
+                    Debug.crash "This tab doesn't have a identifier display"
+
+        displayPk =
+            List.map
+                (\pk ->
+                    ColumnName.completeName pk
+                )
+                display.pk
+
+        rows =
+            { columns = displayPk
+            , data = [ values ]
+            }
+    in
+    rows
 
 
 init : Maybe RecordId -> ( Float, Float ) -> Query -> Tab -> TabType -> Rows -> Int -> Model
@@ -102,6 +166,7 @@ init selectedRecordId size query tab tabType rows totalRecords =
             Nothing ->
                 False
     , selectedRecordId = selectedRecordId
+    , unlinked = []
     }
 
 
@@ -890,6 +955,34 @@ update msg model =
                     LinkRow.init linkRowId model.tab
             in
             { model | linkRows = model.linkRows ++ [ linkRow ] }
+                => Cmd.none
+
+        ToolbarMsg Toolbar.ClickedMainDelete ->
+            let
+                selected =
+                    selectedRows model
+
+                updatedPageRows =
+                    List.map
+                        (\page ->
+                            List.filterMap
+                                (\row ->
+                                    if List.member row selected then
+                                        Nothing
+                                    else
+                                        Just row
+                                )
+                                page
+                        )
+                        model.pageRows
+
+                _ =
+                    Debug.log "unlinked" selected
+            in
+            { model
+                | unlinked = selected
+                , pageRows = updatedPageRows
+            }
                 => Cmd.none
 
         ToolbarMsg toolbarMsg ->

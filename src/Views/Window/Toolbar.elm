@@ -38,6 +38,7 @@ type Msg
     | ToggleMultiSort
     | ClickedResetMultiSort
     | ClickedCancelOnDetail
+    | ClickedDeleteOnDetail
     | ClickedSaveOnDetail
     | ClickedCancelOnMain
     | ClickedLinkExisting
@@ -367,6 +368,7 @@ viewForDetailRecord model =
         , button
             [ class "btn btn-large btn-default tooltip"
             , flexStyle
+            , onClick ClickedDeleteOnDetail
             ]
             [ span [ class "icon icon-text" ]
                 [ Ionicon.trashA iconSize iconColor ]

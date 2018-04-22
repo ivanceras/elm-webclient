@@ -4,6 +4,7 @@ import Data.Window.Field as Field exposing (Field)
 import Data.Window.Lookup as Lookup exposing (Lookup)
 import Data.Window.Tab as Tab exposing (Tab)
 import Data.Window.TableName as TableName exposing (TableName)
+import Data.Window.Value as Value exposing (Value(..))
 import Data.Window.Widget as Widget exposing (Alignment(..), DropdownInfo)
 import Html exposing (..)
 import Html.Attributes exposing (attribute, checked, class, classList, href, id, placeholder, src, style, type_)
@@ -23,6 +24,18 @@ type alias Model =
     , dropdownInfo : DropdownInfo
     , linkRowId : Int
     }
+
+
+getLinkRow : Model -> Maybe Value
+getLinkRow model =
+    let
+        dropdownModel =
+            model.dropdownModel
+
+        linkRow =
+            DropdownDisplay.getSelected dropdownModel
+    in
+    linkRow
 
 
 init : Int -> Tab -> Model

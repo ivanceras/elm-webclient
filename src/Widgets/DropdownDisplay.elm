@@ -1,4 +1,13 @@
-module Widgets.DropdownDisplay exposing (Model, Msg(..), init, pageRequestNeeded, update, view)
+module Widgets.DropdownDisplay
+    exposing
+        ( Model
+        , Msg(..)
+        , getSelected
+        , init
+        , pageRequestNeeded
+        , update
+        , view
+        )
 
 import Color
 import Constant
@@ -19,6 +28,16 @@ type alias Model =
     , alignment : Alignment
     , width : Int
     }
+
+
+{-|
+
+    return the selected value
+
+-}
+getSelected : Model -> Maybe Value
+getSelected model =
+    model.selected
 
 
 init : Alignment -> Int -> Maybe Value -> Model
