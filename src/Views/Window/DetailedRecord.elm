@@ -10,6 +10,7 @@ module Views.Window.DetailedRecord
         )
 
 import Constant
+import Data.DataContainer as DataContainer exposing (RecordDetailChangeset, RecordLinkAction(..))
 import Data.Query as Query
 import Data.Query.Sort as Sort exposing (Sort)
 import Data.Session as Session exposing (Session)
@@ -81,88 +82,6 @@ type alias DragPosition =
 type FieldContainer
     = Detail
     | OneOne
-
-
-{-|
-
-    The edited record, collection of edited value for each field
-
--}
-editedRecord : Model -> Record
-editedRecord model =
-    List.map
-        (\field ->
-            let
-                editedValue =
-                    Field.editedValue field
-
-                columnName =
-                    Field.columnName field.field
-            in
-            ( columnName, editedValue )
-        )
-        model.values
-        |> Dict.fromList
-
-
-initialPosition : Float -> Bool -> BrowserWindow.Size -> Position
-initialPosition split isMaximized browserSize =
-    let
-        ( allotedWidth, allotedHeight ) =
-            allotedSize isMaximized browserSize
-
-        allotedMainHeight =
-            round (allotedHeight * split)
-
-        -- 60% main tab, 40% detail tabs
-    in
-    Position 0 allotedMainHeight
-
-
-splitPercentage : Model -> Float
-splitPercentage model =
-    let
-        ( allotedWidth, allotedHeight ) =
-            detailAllotedSize model
-
-        dragPosition =
-            clamp 0 allotedHeight (toFloat model.position.y)
-    in
-    dragPosition / allotedHeight
-
-
-{-|
-
-    Check if the any of values of the detail records is modified.
-    This includes the records on the detail and the one one record linked
-
--}
-isModified : Model -> Bool
-isModified model =
-    let
-        detailModified =
-            List.any Field.isModified model.values
-
-        oneOneModified =
-            List.any
-                (\( tab, fields ) ->
-                    List.any Field.isModified fields
-                )
-                model.oneOneValues
-    in
-    detailModified || oneOneModified
-
-
-getTotalRecords : Settings -> TableName -> Task PageLoadError Int
-getTotalRecords settings tableName =
-    Records.totalRecords settings Nothing tableName
-        |> Http.toTask
-        |> Task.mapError handleLoadError
-
-
-handleLoadError : Http.Error -> PageLoadError
-handleLoadError e =
-    pageLoadError Page.WindowArena ("WindowArena DetailedRecord is currently unavailable. Error: " ++ toString e)
 
 
 init : Bool -> Settings -> TableName -> Action -> ArenaArg -> Window -> Task PageLoadError Model
@@ -359,6 +278,212 @@ init isMaximized settings tableName action arenaArg window =
         initIndirectTabs
         browserSize
         loadWindowLookups
+
+
+{-|
+
+    Get the changeset of this record including the
+    oneOnes
+    hasMany (updated, unlinked, linkedExisting, linkedNew )
+    indirect ( updated, unlinked, linkedExisting, linkedNew )
+
+-}
+getChangeset : Model -> RecordDetailChangeset
+getChangeset model =
+    { record = editedRecord model
+    , oneOnes = getOneOneRecord model
+    , hasMany =
+        getHasManyUpdatedRows model
+            ++ getHasManyLinkNewRows model
+    , indirect =
+        getIndirectLinkNewRows model
+            ++ getIndirectUnlinkedRows model
+    }
+
+
+{-|
+
+    The edited record, collection of edited value for each field
+
+-}
+editedRecord : Model -> Record
+editedRecord model =
+    List.map
+        (\field ->
+            let
+                editedValue =
+                    Field.editedValue field
+
+                columnName =
+                    Field.columnName field.field
+            in
+            ( columnName, editedValue )
+        )
+        model.values
+        |> Dict.fromList
+
+
+{-|
+
+    Get one one record for each oneOneTab
+
+-}
+getOneOneRecord : Model -> List ( TableName, Maybe Record )
+getOneOneRecord model =
+    List.map
+        (\( oneOneTab, fields ) ->
+            let
+                record =
+                    List.map
+                        (\field ->
+                            let
+                                editedValue =
+                                    Field.editedValue field
+
+                                columnName =
+                                    Field.columnName field.field
+                            in
+                            ( columnName, editedValue )
+                        )
+                        fields
+                        |> Dict.fromList
+                        |> Maybe.Just
+            in
+            ( oneOneTab.tableName, record )
+        )
+        model.oneOneValues
+
+
+{-|
+
+    return the updated rows for the each hasmany tab
+    Note: indirect tab is not allowed to edit any of the row,
+        If you want to edit the indirect record, click on it and edit it on its own container (DetailedRecord)
+
+-}
+getHasManyUpdatedRows : Model -> List ( TableName, RecordLinkAction, Rows )
+getHasManyUpdatedRows model =
+    List.map
+        (\hasMany ->
+            let
+                hasManyTab =
+                    hasMany.tab
+
+                updatedRows =
+                    Tab.editedRows hasMany
+            in
+            ( hasManyTab.tableName, Edited, updatedRows )
+        )
+        model.hasManyTabs
+
+
+{-|
+
+    get the linked new rows for each of the hasMany tables
+
+-}
+getHasManyLinkNewRows : Model -> List ( TableName, RecordLinkAction, Rows )
+getHasManyLinkNewRows model =
+    List.map
+        (\hasMany ->
+            let
+                linkNewRows =
+                    Tab.getLinkNewRows hasMany
+            in
+            ( hasMany.tab.tableName, LinkNew, linkNewRows )
+        )
+        model.hasManyTabs
+
+
+{-|
+
+    get the linked new rows of the indirect tables
+
+-}
+getIndirectLinkNewRows : Model -> List ( TableName, TableName, RecordLinkAction, Rows )
+getIndirectLinkNewRows model =
+    List.map
+        (\( viaTableName, indirect ) ->
+            let
+                updatedRows =
+                    Tab.getLinkNewRows indirect
+            in
+            ( indirect.tab.tableName, viaTableName, LinkNew, updatedRows )
+        )
+        model.indirectTabs
+
+
+getIndirectUnlinkedRows : Model -> List ( TableName, TableName, RecordLinkAction, Rows )
+getIndirectUnlinkedRows model =
+    List.map
+        (\( viaTableName, indirect ) ->
+            let
+                unlinkedRows =
+                    Tab.getUnlinkedRows indirect
+            in
+            ( indirect.tab.tableName, viaTableName, Unlink, unlinkedRows )
+        )
+        model.indirectTabs
+
+
+initialPosition : Float -> Bool -> BrowserWindow.Size -> Position
+initialPosition split isMaximized browserSize =
+    let
+        ( allotedWidth, allotedHeight ) =
+            allotedSize isMaximized browserSize
+
+        allotedMainHeight =
+            round (allotedHeight * split)
+
+        -- 60% main tab, 40% detail tabs
+    in
+    Position 0 allotedMainHeight
+
+
+splitPercentage : Model -> Float
+splitPercentage model =
+    let
+        ( allotedWidth, allotedHeight ) =
+            detailAllotedSize model
+
+        dragPosition =
+            clamp 0 allotedHeight (toFloat model.position.y)
+    in
+    dragPosition / allotedHeight
+
+
+{-|
+
+    Check if the any of values of the detail records is modified.
+    This includes the records on the detail and the one one record linked
+
+-}
+isModified : Model -> Bool
+isModified model =
+    let
+        detailModified =
+            List.any Field.isModified model.values
+
+        oneOneModified =
+            List.any
+                (\( tab, fields ) ->
+                    List.any Field.isModified fields
+                )
+                model.oneOneValues
+    in
+    detailModified || oneOneModified
+
+
+getTotalRecords : Settings -> TableName -> Task PageLoadError Int
+getTotalRecords settings tableName =
+    Records.totalRecords settings Nothing tableName
+        |> Http.toTask
+        |> Task.mapError handleLoadError
+
+
+handleLoadError : Http.Error -> PageLoadError
+handleLoadError e =
+    pageLoadError Page.WindowArena ("WindowArena DetailedRecord is currently unavailable. Error: " ++ toString e)
 
 
 createOneOneFields : Int -> Action -> List Tab -> List ( TableName, Maybe Record ) -> List ( Tab, List Field.Model )

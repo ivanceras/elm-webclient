@@ -34,6 +34,7 @@ type Msg
     = ClickedClose
     | ClickedMaximize Bool
     | ClickedNewButton
+    | ClickedInsertNewButton
     | ClickedMainDelete
     | ToggleMultiSort
     | ClickedResetMultiSort
@@ -132,13 +133,24 @@ view tabType model =
                 ForIndirect ->
                     False
 
-        showAddLink =
+        showLinkNewRecord =
             case tabType of
                 ForMain ->
                     False
 
                 ForHasMany ->
                     True
+
+                ForIndirect ->
+                    True
+
+        showLinkExistingRecord =
+            case tabType of
+                ForMain ->
+                    False
+
+                ForHasMany ->
+                    False
 
                 ForIndirect ->
                     True
@@ -167,6 +179,19 @@ view tabType model =
             [ class "btn btn-large btn-default tooltip"
             , flexStyle
             , onClick
+                ClickedInsertNewButton
+            ]
+            [ span [ class "icon icon-text tab-action" ]
+                [ Ionicon.plus iconSize iconColor ]
+            , div [] [ text "Insert New record" ]
+                |> viewIf showText
+            , span [ class "tooltip-text" ] [ text "Insert a new record in this list" ]
+            ]
+            |> viewIf showNewButton
+        , button
+            [ class "btn btn-large btn-default tooltip"
+            , flexStyle
+            , onClick
                 ClickedLinkExisting
             ]
             [ span [ class "icon icon-text tab-action" ]
@@ -175,7 +200,7 @@ view tabType model =
                 |> viewIf showText
             , span [ class "tooltip-text" ] [ text "Search and Link existing record into the selected record" ]
             ]
-            |> viewIf showAddLink
+            |> viewIf showLinkExistingRecord
         , button
             [ class "btn btn-large btn-default tooltip"
             , flexStyle
@@ -187,7 +212,7 @@ view tabType model =
                 |> viewIf showText
             , span [ class "tooltip-text" ] [ text "Create a new record and link to this selected record" ]
             ]
-            |> viewIf showAddLink
+            |> viewIf showLinkNewRecord
         , button
             [ class "btn btn-large btn-default tooltip"
             , flexStyle

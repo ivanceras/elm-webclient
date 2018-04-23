@@ -1101,6 +1101,8 @@ a.primary-link {
     cursor: pointer;
 }
 
-.view-link-rows {
+.link-row {
     height: 30px;
+    display: flex;
+    flex-direction: row;
 }

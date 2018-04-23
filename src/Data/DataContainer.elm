@@ -57,6 +57,7 @@ type RecordLinkAction
     = Unlink
     | LinkExisting
     | LinkNew
+    | Edited
 
 
 recordLinkActionEncoder : RecordLinkAction -> Encode.Value
@@ -71,6 +72,9 @@ recordLinkActionEncoder action =
         LinkNew ->
             Encode.string "LinkNew"
 
+        Edited ->
+            Encode.string "Edited"
+
 
 {-|
 
@@ -81,8 +85,8 @@ recordLinkActionEncoder action =
 type alias RecordDetailChangeset =
     { record : Record
     , oneOnes : List ( TableName, Maybe Record )
-    , hasMany : ( RecordLinkAction, List ( TableName, Rows ) )
-    , indirect : ( RecordLinkAction, List ( TableName, TableName, Rows ) )
+    , hasMany : List ( TableName, RecordLinkAction, Rows )
+    , indirect : List ( TableName, TableName, RecordLinkAction, Rows )
     }
 
 
@@ -107,36 +111,28 @@ changesetEncoder changeset =
                 |> Encode.list
           )
         , ( "has_many"
-          , case changeset.hasMany of
-                ( action, list ) ->
+          , List.map
+                (\( tableName, action, rows ) ->
                     Encode.list
-                        [ recordLinkActionEncoder action
-                        , List.map
-                            (\( tableName, rows ) ->
-                                Encode.list
-                                    [ TableName.encoder tableName
-                                    , Record.rowsEncoder rows
-                                    ]
-                            )
-                            list
-                            |> Encode.list
+                        [ TableName.encoder tableName
+                        , recordLinkActionEncoder action
+                        , Record.rowsEncoder rows
                         ]
+                )
+                changeset.hasMany
+                |> Encode.list
           )
         , ( "indirect"
-          , case changeset.indirect of
-                ( action, list ) ->
+          , List.map
+                (\( tableName, via, action, rows ) ->
                     Encode.list
-                        [ recordLinkActionEncoder action
-                        , List.map
-                            (\( tableName, via, rows ) ->
-                                Encode.list
-                                    [ TableName.encoder tableName
-                                    , TableName.encoder via
-                                    , Record.rowsEncoder rows
-                                    ]
-                            )
-                            list
-                            |> Encode.list
+                        [ TableName.encoder tableName
+                        , TableName.encoder via
+                        , recordLinkActionEncoder action
+                        , Record.rowsEncoder rows
                         ]
+                )
+                changeset.indirect
+                |> Encode.list
           )
         ]

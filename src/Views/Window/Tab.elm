@@ -3,6 +3,9 @@ module Views.Window.Tab
         ( Model
         , Msg(..)
         , dropdownPageRequestNeeded
+        , editedRows
+        , getLinkNewRows
+        , getUnlinkedRows
         , init
         , listView
         , pageRequestNeeded
@@ -89,6 +92,27 @@ editedRows model =
 
 {-|
 
+    return the newly inserted rows
+
+-}
+getNewRows : Model -> Rows
+getNewRows model =
+    let
+        columns =
+            Tab.columnNames model.tab
+
+        newRows =
+            List.map
+                (\newRow ->
+                    Row.editedRecord newRow
+                )
+                model.newRows
+    in
+    Record.listRecordToRows columns newRows
+
+
+{-|
+
     return the new inserted rows
 
 -}
@@ -108,8 +132,34 @@ getLinkNewRows model =
     Record.listRecordToRows columns listRecords
 
 
-getLinkRows : Model -> Rows
-getLinkRows model =
+{-|
+
+    return the unlinked new rows
+
+-}
+getUnlinkedRows : Model -> Rows
+getUnlinkedRows model =
+    let
+        columns =
+            Tab.columnNames model.tab
+
+        listRecords =
+            List.map
+                (\newRow ->
+                    Row.editedRecord newRow
+                )
+                model.unlinked
+    in
+    Record.listRecordToRows columns listRecords
+
+
+{-|
+
+    return the rows linked existing records
+
+-}
+getLinkExistingRows : Model -> Rows
+getLinkExistingRows model =
     let
         values =
             List.filterMap
@@ -929,22 +979,11 @@ update msg model =
             { model | pageRows = updatedPageRows }
                 => Cmd.batch subCmd
 
+        ToolbarMsg Toolbar.ClickedInsertNewButton ->
+            insertNewRow model
+
         ToolbarMsg Toolbar.ClickedLinkNewRecord ->
-            let
-                newRowId =
-                    List.length model.newRows
-
-                newRecordId =
-                    Record.TempLocal newRowId
-
-                emptyRecord =
-                    Record.empty
-
-                newRow =
-                    Row.init (WindowArena.NewRecord Presentation.InList) True newRecordId emptyRecord model.tab
-            in
-            { model | newRows = model.newRows ++ [ newRow ] }
-                => Cmd.none
+            insertNewRow model
 
         ToolbarMsg Toolbar.ClickedLinkExisting ->
             let
@@ -1022,6 +1061,27 @@ update msg model =
                 , pageRequestInFlight = True -- since this will trigger refreshPage in Window.elm
             }
                 => Cmd.none
+
+
+{-| insert a new row model into the page
+-}
+insertNewRow : Model -> ( Model, Cmd Msg )
+insertNewRow model =
+    let
+        newRowId =
+            List.length model.newRows
+
+        newRecordId =
+            Record.TempLocal newRowId
+
+        emptyRecord =
+            Record.empty
+
+        newRow =
+            Row.init (WindowArena.NewRecord Presentation.InList) True newRecordId emptyRecord model.tab
+    in
+    { model | newRows = model.newRows ++ [ newRow ] }
+        => Cmd.none
 
 
 resetPageRows : Model -> ( List (List Row.Model), List (Cmd Msg) )

@@ -1,5 +1,6 @@
 module Views.Window.LinkRow exposing (..)
 
+import Constant
 import Data.Window.Field as Field exposing (Field)
 import Data.Window.Lookup as Lookup exposing (Lookup)
 import Data.Window.Tab as Tab exposing (Tab)
@@ -8,6 +9,7 @@ import Data.Window.Value as Value exposing (Value(..))
 import Data.Window.Widget as Widget exposing (Alignment(..), DropdownInfo)
 import Html exposing (..)
 import Html.Attributes exposing (attribute, checked, class, classList, href, id, placeholder, src, style, type_)
+import Ionicon
 import Util exposing ((=>))
 import Views.Window.Field as Field
 import Widgets.DropdownDisplay as DropdownDisplay
@@ -88,10 +90,18 @@ view lookup model =
 
         listValue =
             Field.listRecordToListString dropdownInfo listRecord
+
+        iconColor =
+            Constant.iconColor
+
+        iconSize =
+            Constant.iconSize
     in
     div [ class "link-row" ]
         [ DropdownDisplay.view listValue model.dropdownModel
             |> Html.map DropdownDisplayMsg
+        , button []
+            [ Ionicon.checkmark iconSize iconColor ]
         ]
 
 
