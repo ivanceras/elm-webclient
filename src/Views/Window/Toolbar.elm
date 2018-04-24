@@ -34,6 +34,7 @@ type Msg
     = ClickedClose
     | ClickedMaximize Bool
     | ClickedNewButton
+    | ClickedSaveButton
     | ClickedInsertNewButton
     | ClickedMainDelete
     | ToggleMultiSort
@@ -216,6 +217,7 @@ view tabType model =
         , button
             [ class "btn btn-large btn-default tooltip"
             , flexStyle
+            , onClick ClickedSaveButton
             ]
             [ span [ class "icon icon-text" ]
                 [ MaterialContent.save iconColor iconSize ]

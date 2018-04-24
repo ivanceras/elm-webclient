@@ -16,6 +16,7 @@ module Views.Window.Tab
         )
 
 import Constant
+import Data.DataContainer as DataContainer exposing (SaveContainer)
 import Data.Query as Query exposing (Query)
 import Data.Query.Filter as Filter
 import Data.Query.Order as Order exposing (Order)
@@ -66,6 +67,25 @@ type alias Model =
 
 {-|
 
+    return the modification of the record in this tab
+
+-}
+getForSave : Model -> SaveContainer
+getForSave model =
+    let
+        tab =
+            model.tab
+
+        tableName =
+            tab.tableName
+    in
+    { forInsert = ( tableName, getNewRows model )
+    , forUpdate = ( tableName, editedRows model )
+    }
+
+
+{-|
+
     return the modified rows
 
 -}
@@ -78,9 +98,12 @@ editedRows model =
         listRecords =
             List.map
                 (\page ->
-                    List.map
+                    List.filterMap
                         (\row ->
-                            Row.editedRecord row
+                            if Row.isModified row then
+                                Just (Row.editedRecord row)
+                            else
+                                Nothing
                         )
                         page
                 )
@@ -962,6 +985,22 @@ update msg model =
             in
             { model | pageRows = pageRows }
                 => Cmd.batch cmds
+
+        ToolbarMsg Toolbar.ClickedSaveButton ->
+            let
+                forSave =
+                    getForSave model
+
+                json =
+                    Encode.encode 4 (DataContainer.containerEncoder forSave)
+
+                _ =
+                    Debug.log "for save:" forSave
+
+                _ =
+                    Debug.log ("For Save:" ++ json) ""
+            in
+            model => Cmd.none
 
         ToolbarMsg Toolbar.ToggleMultiSort ->
             { model | isMultiSort = not model.isMultiSort }

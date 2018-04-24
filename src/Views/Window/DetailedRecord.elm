@@ -30,6 +30,7 @@ import Html.Attributes exposing (attribute, class, classList, href, id, placehol
 import Html.Events exposing (on, onClick)
 import Http
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Mouse exposing (Position)
 import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
 import Request.Window
@@ -290,7 +291,29 @@ init isMaximized settings tableName action arenaArg window =
 -}
 getChangeset : Model -> RecordDetailChangeset
 getChangeset model =
+    let
+        arenaArg =
+            model.arenaArg
+
+        action =
+            arenaArg.action
+
+        recordAction =
+            case action of
+                ListPage ->
+                    Debug.crash "unexpected action"
+
+                Select s ->
+                    Edited
+
+                NewRecord p ->
+                    CreateNew
+
+                Copy s ->
+                    CreateNew
+    in
     { record = editedRecord model
+    , recordAction = recordAction
     , oneOnes = getOneOneRecord model
     , hasMany =
         getHasManyUpdatedRows model
@@ -1305,8 +1328,17 @@ update session msg model =
 
         ToolbarMsg Toolbar.ClickedSaveOnDetail ->
             let
-                record =
-                    editedRecord model
+                changeSet =
+                    getChangeset model
+
+                _ =
+                    Debug.log "Changeset:" changeSet
+
+                json =
+                    Encode.encode 4 (DataContainer.changesetEncoder changeSet)
+
+                _ =
+                    Debug.log "json" json
             in
             model => Cmd.none
 

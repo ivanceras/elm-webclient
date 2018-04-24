@@ -16,8 +16,8 @@ import Json.Encode as Encode
 
 -}
 type alias SaveContainer =
-    { forInsert : ( TableName, List RecordDetailChangeset )
-    , forUpdate : ( TableName, List RecordDetailChangeset )
+    { forInsert : ( TableName, Rows )
+    , forUpdate : ( TableName, Rows )
     }
 
 
@@ -26,20 +26,18 @@ containerEncoder container =
     Encode.object
         [ ( "for_insert"
           , case container.forInsert of
-                ( tableName, changesets ) ->
+                ( tableName, rows ) ->
                     Encode.list
                         [ TableName.encoder tableName
-                        , List.map changesetEncoder changesets
-                            |> Encode.list
+                        , Record.rowsEncoder rows
                         ]
           )
         , ( "for_update"
           , case container.forUpdate of
-                ( tableName, changesets ) ->
+                ( tableName, rows ) ->
                     Encode.list
                         [ TableName.encoder tableName
-                        , List.map changesetEncoder changesets
-                            |> Encode.list
+                        , Record.rowsEncoder rows
                         ]
           )
         ]
@@ -51,6 +49,8 @@ containerEncoder container =
      - unlink: remove the linkage of has_many/indirect record to the selected record
      - linkExisting: take the id of an existing has_many/indirect record and put it in the linker table
      - linkNew: create a new has_many/indirect record and put it's primary id to the linker table
+     - edited : the main record is modified
+     - createNew: the main record is a new record
 
 -}
 type RecordLinkAction
@@ -58,6 +58,7 @@ type RecordLinkAction
     | LinkExisting
     | LinkNew
     | Edited
+    | CreateNew
 
 
 recordLinkActionEncoder : RecordLinkAction -> Encode.Value
@@ -75,6 +76,9 @@ recordLinkActionEncoder action =
         Edited ->
             Encode.string "Edited"
 
+        CreateNew ->
+            Encode.string "CreateNew"
+
 
 {-|
 
@@ -84,6 +88,7 @@ recordLinkActionEncoder action =
 -}
 type alias RecordDetailChangeset =
     { record : Record
+    , recordAction : RecordLinkAction
     , oneOnes : List ( TableName, Maybe Record )
     , hasMany : List ( TableName, RecordLinkAction, Rows )
     , indirect : List ( TableName, TableName, RecordLinkAction, Rows )
@@ -94,6 +99,7 @@ changesetEncoder : RecordDetailChangeset -> Encode.Value
 changesetEncoder changeset =
     Encode.object
         [ ( "record", Record.encoder changeset.record )
+        , ( "record_action", recordLinkActionEncoder changeset.recordAction )
         , ( "one_ones"
           , List.map
                 (\( tableName, record ) ->
