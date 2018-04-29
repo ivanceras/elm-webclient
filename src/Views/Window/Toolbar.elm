@@ -35,6 +35,7 @@ type Msg
     | ClickedMaximize Bool
     | ClickedNewButton
     | ClickedSaveButton
+    | ClickedRefresh
     | ClickedInsertNewButton
     | ClickedMainDelete
     | ToggleMultiSort
@@ -124,6 +125,17 @@ view tabType model =
             style [ ( "flex-direction", flexDirection ) ]
 
         showNewButton =
+            case tabType of
+                ForMain ->
+                    True
+
+                ForHasMany ->
+                    False
+
+                ForIndirect ->
+                    False
+
+        showSaveButton =
             case tabType of
                 ForMain ->
                     True
@@ -226,6 +238,7 @@ view tabType model =
             , modifiedBadge
             , span [ class "tooltip-text" ] [ text saveTooltip ]
             ]
+            |> viewIf showSaveButton
         , button
             [ class "btn btn-large btn-default tooltip"
             , flexStyle
@@ -252,6 +265,7 @@ view tabType model =
         , button
             [ class "btn btn-large btn-default tooltip"
             , flexStyle
+            , onClick ClickedRefresh
             ]
             [ span [ class "icon icon-text" ]
                 [ Ionicon.refresh iconSize iconColor ]

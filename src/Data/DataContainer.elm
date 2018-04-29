@@ -88,7 +88,7 @@ recordLinkActionEncoder action =
 -}
 type alias RecordDetailChangeset =
     { record : Record
-    , recordAction : RecordLinkAction
+    , action : RecordLinkAction
     , oneOnes : List ( TableName, Maybe Record )
     , hasMany : List ( TableName, RecordLinkAction, Rows )
     , indirect : List ( TableName, TableName, RecordLinkAction, Rows )
@@ -99,7 +99,7 @@ changesetEncoder : RecordDetailChangeset -> Encode.Value
 changesetEncoder changeset =
     Encode.object
         [ ( "record", Record.encoder changeset.record )
-        , ( "record_action", recordLinkActionEncoder changeset.recordAction )
+        , ( "action", recordLinkActionEncoder changeset.action )
         , ( "one_ones"
           , List.map
                 (\( tableName, record ) ->

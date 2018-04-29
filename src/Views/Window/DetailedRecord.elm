@@ -34,6 +34,7 @@ import Json.Encode as Encode
 import Mouse exposing (Position)
 import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
 import Request.Window
+import Request.Window.DataUpdate as DataUpdate
 import Request.Window.Records as Records
 import Route
 import Settings exposing (Settings)
@@ -71,6 +72,7 @@ type alias Model =
     , dropdownPageRequestInFlight : Bool
     , settings : Settings
     , isMaximized : Bool
+    , errors : List String
     }
 
 
@@ -113,14 +115,6 @@ init isMaximized settings tableName action arenaArg window =
                 |> Http.toTask
                 |> Task.mapError handleLoadError
 
-        hasManyTableRecordCounts =
-            List.map
-                (\hasManyTab ->
-                    getTotalRecords settings hasManyTab.tableName
-                )
-                window.hasManyTabs
-                |> Task.sequence
-
         splitPercentage =
             case arenaArg.sectionSplit of
                 Just split ->
@@ -133,8 +127,8 @@ init isMaximized settings tableName action arenaArg window =
             arenaArg.sectionQuery
 
         initHasManyTabs =
-            Task.map4
-                (\browserSize detailRows lookup recordCounts ->
+            Task.map3
+                (\browserSize detailRows lookup ->
                     let
                         ( mainRecordHeight, detailTabHeight ) =
                             splitTabHeights window (initialPosition splitPercentage isMaximized browserSize) isMaximized browserSize
@@ -145,8 +139,8 @@ init isMaximized settings tableName action arenaArg window =
                         tabSize =
                             ( allotedWidth, detailTabHeight )
                     in
-                    List.map2
-                        (\hasManyTab hasManyRecordCount ->
+                    List.map
+                        (\hasManyTab ->
                             let
                                 rows =
                                     case detailRows of
@@ -163,30 +157,20 @@ init isMaximized settings tableName action arenaArg window =
                             in
                             case rows of
                                 Just rows ->
-                                    Tab.init Nothing tabSize sectionQuery hasManyTab InHasMany rows hasManyRecordCount
+                                    Tab.init arenaArg settings Nothing tabSize sectionQuery hasManyTab InHasMany rows
 
                                 Nothing ->
                                     Debug.crash "Empty row"
                         )
                         window.hasManyTabs
-                        recordCounts
                 )
                 browserSize
                 fetchSelected
                 loadWindowLookups
-                hasManyTableRecordCounts
-
-        indirectTableRecordCounts =
-            List.map
-                (\( _, indirectTab ) ->
-                    getTotalRecords settings indirectTab.tableName
-                )
-                window.indirectTabs
-                |> Task.sequence
 
         initIndirectTabs =
-            Task.map4
-                (\browserSize detailRows lookup recordCounts ->
+            Task.map3
+                (\browserSize detailRows lookup ->
                     let
                         ( mainRecordHeight, detailTabHeight ) =
                             splitTabHeights window (initialPosition splitPercentage isMaximized browserSize) isMaximized browserSize
@@ -197,8 +181,8 @@ init isMaximized settings tableName action arenaArg window =
                         tabSize =
                             ( allotedWidth, detailTabHeight )
                     in
-                    List.map2
-                        (\( linker, indirectTab ) indirectRecordCount ->
+                    List.map
+                        (\( linker, indirectTab ) ->
                             let
                                 rows =
                                     case detailRows of
@@ -215,18 +199,16 @@ init isMaximized settings tableName action arenaArg window =
                             in
                             case rows of
                                 Just rows ->
-                                    ( linker, Tab.init Nothing tabSize sectionQuery indirectTab InIndirect rows indirectRecordCount )
+                                    ( linker, Tab.init arenaArg settings Nothing tabSize sectionQuery indirectTab InIndirect rows )
 
                                 Nothing ->
                                     Debug.crash "Empty row"
                         )
                         window.indirectTabs
-                        recordCounts
                 )
                 browserSize
                 fetchSelected
                 loadWindowLookups
-                indirectTableRecordCounts
     in
     Task.map5
         (\detail hasManyTabs indirectTabs browserSize lookup ->
@@ -272,6 +254,7 @@ init isMaximized settings tableName action arenaArg window =
             , dropdownPageRequestInFlight = False
             , settings = settings
             , isMaximized = isMaximized
+            , errors = []
             }
         )
         fetchSelected
@@ -313,7 +296,7 @@ getChangeset model =
                     CreateNew
     in
     { record = editedRecord model
-    , recordAction = recordAction
+    , action = recordAction
     , oneOnes = getOneOneRecord model
     , hasMany =
         getHasManyUpdatedRows model
@@ -493,15 +476,25 @@ isModified model =
                     List.any Field.isModified fields
                 )
                 model.oneOneValues
+
+        hasManyModified =
+            List.any
+                (\tab ->
+                    Tab.isModified tab
+                )
+                model.hasManyTabs
+
+        indirectModified =
+            List.any
+                (\( via, tab ) ->
+                    Tab.isModified tab
+                )
+                model.indirectTabs
     in
-    detailModified || oneOneModified
-
-
-getTotalRecords : Settings -> TableName -> Task PageLoadError Int
-getTotalRecords settings tableName =
-    Records.totalRecords settings Nothing tableName
-        |> Http.toTask
-        |> Task.mapError handleLoadError
+    detailModified
+        || oneOneModified
+        || hasManyModified
+        || indirectModified
 
 
 handleLoadError : Http.Error -> PageLoadError
@@ -1100,6 +1093,8 @@ type Msg
     | ToolbarMsg Toolbar.Msg
     | Maximize Bool
     | ClickedCloseButton
+    | RecordChangesetUpdated RecordDetail
+    | RecordChangesetUpdateError String
 
 
 updateDrag : Session -> Drag -> Model -> ( Model, Cmd Msg )
@@ -1328,19 +1323,28 @@ update session msg model =
 
         ToolbarMsg Toolbar.ClickedSaveOnDetail ->
             let
-                changeSet =
+                changeset =
                     getChangeset model
 
                 _ =
-                    Debug.log "Changeset:" changeSet
+                    Debug.log "Changeset:" changeset
 
                 json =
-                    Encode.encode 4 (DataContainer.changesetEncoder changeSet)
+                    Encode.encode 4 (DataContainer.changesetEncoder changeset)
 
                 _ =
                     Debug.log "json" json
+
+                settings =
+                    model.settings
+
+                tab =
+                    model.window.mainTab
+
+                tableName =
+                    tab.tableName
             in
-            model => Cmd.none
+            model => requestUpdateRecords settings tableName changeset
 
         ToolbarMsg Toolbar.ClickedCancelOnDetail ->
             let
@@ -1376,6 +1380,33 @@ update session msg model =
         -- handled in WindowArena
         ClickedCloseButton ->
             model => Cmd.none
+
+        RecordChangesetUpdated recordDetail ->
+            let
+                _ =
+                    Debug.log "updated record" recordDetail
+            in
+            { model | selectedRow = Just recordDetail }
+                => Cmd.none
+
+        RecordChangesetUpdateError e ->
+            { model | errors = model.errors ++ [ e ] }
+                => Cmd.none
+
+
+requestUpdateRecords : Settings -> TableName -> RecordDetailChangeset -> Cmd Msg
+requestUpdateRecords settings tableName changeset =
+    DataUpdate.updateRecord settings Nothing tableName changeset
+        |> Http.toTask
+        |> Task.attempt
+            (\result ->
+                case result of
+                    Ok rows ->
+                        RecordChangesetUpdated rows
+
+                    Err e ->
+                        RecordChangesetUpdateError (toString e)
+            )
 
 
 updateFields : Field.Msg -> Field.Model -> List Field.Model -> List ( Field.Model, Cmd Msg )

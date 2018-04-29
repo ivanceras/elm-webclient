@@ -147,11 +147,6 @@ init settings session tableName window arenaArg =
                 |> Http.toTask
                 |> Task.mapError (handleLoadError " inLoadrecords")
 
-        getTotalRecords =
-            Request.Window.Records.totalRecords settings maybeAuthToken tableName
-                |> Http.toTask
-                |> Task.mapError (handleLoadError "In getTotalRecords")
-
         loadWindowLookups : Task PageLoadError Lookup
         loadWindowLookups =
             Request.Window.Records.lookups settings maybeAuthToken tableName
@@ -166,14 +161,13 @@ init settings session tableName window arenaArg =
             pageLoadError Page.Other "Window is currently unavailable."
 
         mainTabTask =
-            Task.map4
-                (\records size lookup totalRecords ->
-                    Tab.init selectedRecordId (calcMainTabSize size) query window.mainTab InMain records totalRecords
+            Task.map3
+                (\records size lookup ->
+                    Tab.init arenaArg settings selectedRecordId (calcMainTabSize size) query window.mainTab InMain records
                 )
                 loadRecords
                 getBrowserSize
                 loadWindowLookups
-                getTotalRecords
                 |> Task.mapError (handleLoadError "in mainTabTask")
     in
     Task.map2
@@ -282,6 +276,15 @@ update session msg model =
         CloseWindow ->
             model => Cmd.none
 
+        {-
+           TabMsg (Tab.ToolbarMsg Toolbar.ClickedRefresh) ->
+               let
+                   mainTab =
+                       model.mainTab
+               in
+               model
+                   => refreshPage mainTab model
+        -}
         TabMsg (Tab.ToolbarMsg Toolbar.ClickedMainDelete) ->
             let
                 selectedCount =

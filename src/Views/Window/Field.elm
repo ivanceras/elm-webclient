@@ -717,9 +717,15 @@ dropdownPageRequestNeeded lookup model =
             Nothing
 
 
-viewDatePicker : Attribute msg -> Maybe Value -> Html msg
+viewDatePicker : Attribute Msg -> Maybe Value -> Html Msg
 viewDatePicker styles maybeValue =
     let
+        format =
+            "%Y-%m-%dT%H:%M:%S"
+
+        iso8601format v =
+            Date.Format.format format v
+
         dateString =
             case maybeValue of
                 Just value ->
@@ -728,13 +734,13 @@ viewDatePicker styles maybeValue =
                             ""
 
                         Value.Timestamp v ->
-                            Date.Format.format "%Y-%m-%d" v
+                            iso8601format v
 
                         Value.Date v ->
-                            Date.Format.format "%Y-%m-%d" v
+                            iso8601format v
 
                         Value.DateTime v ->
-                            Date.Format.format "%Y-%m-%d" v
+                            iso8601format v
 
                         _ ->
                             Debug.crash ("This is not a supported date: " ++ toString value)
@@ -746,6 +752,7 @@ viewDatePicker styles maybeValue =
         [ type_ "date"
         , styles
         , value dateString
+        , onInput TimestampValueChanged
         ]
         []
 
@@ -754,6 +761,7 @@ type Msg
     = DropdownDisplayMsg DropdownDisplay.Model DropdownDisplay.Msg
     | FixDropdownMsg FixDropdown.Model FixDropdown.Msg
     | StringValueChanged String
+    | TimestampValueChanged String
     | BoolValueChanged Bool
     | ResetChanges
     | SetValue Value
@@ -809,6 +817,22 @@ update msg model =
                     Value.Text v
             in
             { model | editValue = Just value }
+                => Cmd.none
+
+        TimestampValueChanged v ->
+            let
+                value =
+                    case Date.fromString v of
+                        Ok date ->
+                            date
+
+                        Err e ->
+                            Debug.crash ("unable to parse date" ++ toString e)
+
+                dateValue =
+                    Value.Timestamp value
+            in
+            { model | editValue = Just dateValue }
                 => Cmd.none
 
         BoolValueChanged v ->

@@ -7,6 +7,7 @@ module Views.Window.Tab
         , getLinkNewRows
         , getUnlinkedRows
         , init
+        , isModified
         , listView
         , pageRequestNeeded
         , selectedRowCount
@@ -28,15 +29,19 @@ import Data.Window.Presentation as Presentation exposing (Presentation(..))
 import Data.Window.Record as Record exposing (Record, RecordId, Rows)
 import Data.Window.Tab as Tab exposing (Tab, TabType)
 import Data.Window.TableName as TableName exposing (TableName)
-import Data.WindowArena as WindowArena exposing (Action(..))
+import Data.WindowArena as WindowArena exposing (Action(..), ArenaArg)
 import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (attribute, checked, class, classList, href, id, placeholder, property, src, style, type_)
 import Html.Events exposing (onCheck, onClick)
+import Http
 import Ionicon
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
+import Request.Window.DataUpdate as DataUpdate
+import Request.Window.Records
+import Settings exposing (Settings)
 import Task exposing (Task)
 import Util exposing ((=>), Scroll, onScroll, px, viewIf)
 import Views.Window.Field as Field
@@ -62,7 +67,25 @@ type alias Model =
     , query : Query
     , selectedRecordId : Maybe RecordId
     , unlinked : List Row.Model
+    , settings : Settings
+    , arenaArg : ArenaArg
+    , errors : List String
     }
+
+
+isModified : Model -> Bool
+isModified model =
+    let
+        hasUnlinked =
+            List.length model.unlinked > 0
+
+        hasNewRows =
+            List.length model.newRows > 0
+
+        hasLinkRows =
+            List.length model.linkRows > 0
+    in
+    hasUnlinked || hasNewRows || hasLinkRows || hasModifiedRows model
 
 
 {-|
@@ -82,6 +105,19 @@ getForSave model =
     { forInsert = ( tableName, getNewRows model )
     , forUpdate = ( tableName, editedRows model )
     }
+
+
+hasModifiedRows : Model -> Bool
+hasModifiedRows model =
+    List.any
+        (\page ->
+            List.any
+                (\row ->
+                    Row.isModified row
+                )
+                page
+        )
+        model.pageRows
 
 
 {-|
@@ -212,13 +248,14 @@ getLinkExistingRows model =
         rows =
             { columns = displayPk
             , data = [ values ]
+            , count = Nothing
             }
     in
     rows
 
 
-init : Maybe RecordId -> ( Float, Float ) -> Query -> Tab -> TabType -> Rows -> Int -> Model
-init selectedRecordId size query tab tabType rows totalRecords =
+init : ArenaArg -> Settings -> Maybe RecordId -> ( Float, Float ) -> Query -> Tab -> TabType -> Rows -> Model
+init arenaArg settings selectedRecordId size query tab tabType rows =
     { tab = tab
     , tabType = tabType
     , scroll = Scroll 0 0
@@ -229,7 +266,13 @@ init selectedRecordId size query tab tabType rows totalRecords =
     , pageRequestInFlight = False
     , currentPage = 1
     , reachedLastPage = False
-    , totalRecords = totalRecords
+    , totalRecords =
+        case rows.count of
+            Just count ->
+                count
+
+            Nothing ->
+                0
     , query = query
     , isMultiSort =
         case query.sort of
@@ -240,6 +283,9 @@ init selectedRecordId size query tab tabType rows totalRecords =
                 False
     , selectedRecordId = selectedRecordId
     , unlinked = []
+    , settings = settings
+    , arenaArg = arenaArg
+    , errors = []
     }
 
 
@@ -802,6 +848,8 @@ type Msg
     | NextPageReceived Rows
     | NextPageError String
     | RefreshPageReceived Rows
+    | SaveChangesSucceed Rows
+    | SaveChangesErrored String
     | RefreshPageError String
     | RowMsg Row.Model Row.Msg
     | NewRowMsg Row.Model Row.Msg
@@ -856,11 +904,16 @@ update msg model =
                 => Cmd.none
 
         RefreshPageError e ->
-            let
-                _ =
-                    Debug.log "Error receiving refresh page"
-            in
-            model => Cmd.none
+            { model | errors = model.errors ++ [ e ] }
+                => Cmd.none
+
+        SaveChangesSucceed rows ->
+            { model | newRows = [] }
+                => Cmd.none
+
+        SaveChangesErrored e ->
+            { model | errors = model.errors ++ [ e ] }
+                => Cmd.none
 
         RowMsg argRow rowMsg ->
             let
@@ -999,8 +1052,24 @@ update msg model =
 
                 _ =
                     Debug.log ("For Save:" ++ json) ""
+
+                settings =
+                    model.settings
+
+                tab =
+                    model.tab
+
+                tableName =
+                    tab.tableName
             in
-            model => Cmd.none
+            model
+                => Cmd.batch
+                    [ requestSaveTabRowsChanges settings tableName forSave
+                    , refreshPageRows model
+                    ]
+
+        ToolbarMsg Toolbar.ClickedRefresh ->
+            model => refreshPageRows model
 
         ToolbarMsg Toolbar.ToggleMultiSort ->
             { model | isMultiSort = not model.isMultiSort }
@@ -1100,6 +1169,59 @@ update msg model =
                 , pageRequestInFlight = True -- since this will trigger refreshPage in Window.elm
             }
                 => Cmd.none
+
+
+requestSaveTabRowsChanges : Settings -> TableName -> SaveContainer -> Cmd Msg
+requestSaveTabRowsChanges settings tableName forSave =
+    DataUpdate.updateTab settings Nothing tableName forSave
+        |> Http.toTask
+        |> Task.attempt
+            (\result ->
+                let
+                    _ =
+                        Debug.log "save change result:" result
+                in
+                case result of
+                    Ok rows ->
+                        SaveChangesSucceed rows
+
+                    Err e ->
+                        SaveChangesErrored (toString e)
+            )
+
+
+refreshPageRows : Model -> Cmd Msg
+refreshPageRows model =
+    let
+        _ =
+            Debug.log "refreshing in tab" ""
+
+        arenaArg =
+            model.arenaArg
+
+        query =
+            arenaArg.query
+
+        pageQuery =
+            Query.updatePage 1 query
+
+        tab =
+            model.tab
+
+        request =
+            Request.Window.Records.listPageWithQuery model.settings Nothing tab.tableName pageQuery
+    in
+    request
+        |> Http.toTask
+        |> Task.attempt
+            (\result ->
+                case result of
+                    Ok rows ->
+                        RefreshPageReceived rows
+
+                    Err e ->
+                        RefreshPageError (toString e)
+            )
 
 
 {-| insert a new row model into the page

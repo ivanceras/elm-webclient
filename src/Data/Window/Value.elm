@@ -469,10 +469,13 @@ timestampDecoder =
 timestampEncoder : Date -> Encode.Value
 timestampEncoder v =
     let
-        timeString =
-            Date.Format.format "%Y-%m-%d" v
+        format =
+            "%Y-%m-%dT%H:%M:%SZ"
+
+        iso8601format =
+            Date.Format.format format v
     in
-    Encode.object [ ( "Timestamp", Encode.string timeString ) ]
+    Encode.object [ ( "Timestamp", Encode.string iso8601format ) ]
 
 
 dateValueDecoder : Decoder Date

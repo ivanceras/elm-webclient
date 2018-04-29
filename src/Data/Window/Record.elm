@@ -22,13 +22,14 @@ import Date exposing (Date)
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Extra
-import Json.Decode.Pipeline as Pipeline exposing (decode, required)
+import Json.Decode.Pipeline as Pipeline exposing (decode, optional, required)
 import Json.Encode as Encode
 
 
 type alias Rows =
     { columns : List String
     , data : List (List Value)
+    , count : Maybe Int
     }
 
 
@@ -51,6 +52,14 @@ rowsEncoder rows =
     Encode.object
         [ ( "columns", Encode.list (List.map Encode.string rows.columns) )
         , ( "data", data )
+        , ( "count"
+          , case rows.count of
+                Just count ->
+                    Encode.int count
+
+                Nothing ->
+                    Encode.null
+          )
         ]
 
 
@@ -58,6 +67,7 @@ emptyRow : Rows
 emptyRow =
     { columns = []
     , data = []
+    , count = Nothing
     }
 
 
@@ -114,6 +124,7 @@ listRecordToRows columns listRecord =
     in
     { columns = columns
     , data = data
+    , count = Nothing
     }
 
 
@@ -131,6 +142,7 @@ rowsDecoder =
     decode Rows
         |> required "columns" (Decode.list Decode.string)
         |> required "data" (Decode.list (Decode.list Value.decoder))
+        |> required "count" (Decode.nullable Decode.int)
 
 
 
