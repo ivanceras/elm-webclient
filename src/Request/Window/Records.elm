@@ -101,7 +101,7 @@ lookupPage settings page maybeToken tableName =
 
 fetchSelected : Settings -> TableName -> String -> Http.Request RecordDetail
 fetchSelected settings tableName selectedRow =
-    apiUrl settings ("/data/" ++ tableNameToString tableName ++ "/select/" ++ selectedRow)
+    apiUrl settings ("/select/" ++ tableNameToString tableName ++ "/" ++ selectedRow)
         |> HttpBuilder.get
         |> header settings
         |> HttpBuilder.withExpect (Http.expectJson RecordDetail.decoder)
@@ -111,13 +111,13 @@ fetchSelected settings tableName selectedRow =
 fetchHasManyRecords : Settings -> TableName -> String -> TableName -> Int -> Http.Request Rows
 fetchHasManyRecords settings tableName selectedRow hasManyTable hasManyPage =
     apiUrl settings
-        ("/data/"
+        ("/has_many_select/"
             ++ tableNameToString tableName
-            ++ "/select/"
-            ++ selectedRow
-            ++ "/has_many/"
-            ++ tableNameToString hasManyTable
             ++ "/"
+            ++ selectedRow
+            ++ "/"
+            ++ tableNameToString hasManyTable
+            ++ "/page/"
             ++ toString hasManyPage
         )
         |> HttpBuilder.get
@@ -129,13 +129,13 @@ fetchHasManyRecords settings tableName selectedRow hasManyTable hasManyPage =
 fetchIndirectRecords : Settings -> TableName -> String -> TableName -> Int -> Http.Request Rows
 fetchIndirectRecords settings tableName selectedRow hasManyTable hasManyPage =
     apiUrl settings
-        ("/data/"
+        ("/indirect_select/"
             ++ tableNameToString tableName
-            ++ "/select/"
-            ++ selectedRow
-            ++ "/indirect/"
-            ++ tableNameToString hasManyTable
             ++ "/"
+            ++ selectedRow
+            ++ "/"
+            ++ tableNameToString hasManyTable
+            ++ "/page/"
             ++ toString hasManyPage
         )
         |> HttpBuilder.get
