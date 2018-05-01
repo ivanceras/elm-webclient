@@ -27,7 +27,7 @@ updateRecord settings maybeToken tableName recordChangeset =
         _ =
             Debug.log "sending: " jsonBody
     in
-    apiUrl settings ("/changeset/record/" ++ tableNameToString tableName)
+    apiUrl settings ("/record_changeset/" ++ tableNameToString tableName)
         |> HttpBuilder.post
         |> HttpBuilder.withJsonBody jsonBody
         |> HttpBuilder.withExpect (Http.expectJson RecordDetail.decoder)
@@ -44,7 +44,7 @@ updateTab settings maybeToken tableName container =
         _ =
             Debug.log "sending: " jsonBody
     in
-    apiUrl settings ("/changeset/tab/" ++ tableNameToString tableName)
+    apiUrl settings "/tab_changeset/"
         |> HttpBuilder.post
         |> HttpBuilder.withJsonBody jsonBody
         |> HttpBuilder.withExpect (Http.expectJson Record.rowsDecoder)

@@ -34,7 +34,7 @@ deleteRecords settings maybeToken tableName recordIdList =
         jsonBody =
             Encode.list recordIdValues
     in
-    apiUrl settings ("/data/" ++ tableNameToString tableName)
+    apiUrl settings ("/delete/" ++ tableNameToString tableName)
         |> HttpBuilder.delete
         |> HttpBuilder.withJsonBody jsonBody
         |> HttpBuilder.withExpect (Http.expectJson Record.rowsDecoder)
