@@ -8,7 +8,6 @@ module Request.Window.Records
         , listPageWithQuery
         , lookupPage
         , lookups
-          --, totalRecords
         )
 
 import Data.AuthToken as AuthToken exposing (AuthToken, withAuthorization)
@@ -64,19 +63,6 @@ listPageWithQuery settings maybeToken tableName query =
         |> HttpBuilder.withExpect (Http.expectJson Record.rowsDecoder)
         |> withAuthorization maybeToken
         |> HttpBuilder.toRequest
-
-
-
-{-
-   totalRecords : Settings -> Maybe AuthToken -> TableName -> Http.Request Int
-   totalRecords settings maybeToken tableName =
-       apiUrl settings ("/record_count/" ++ tableNameToString tableName)
-           |> HttpBuilder.get
-           |> header settings
-           |> HttpBuilder.withExpect (Http.expectJson Decode.int)
-           |> withAuthorization maybeToken
-           |> HttpBuilder.toRequest
--}
 
 
 lookups : Settings -> Maybe AuthToken -> TableName -> Http.Request Lookup
