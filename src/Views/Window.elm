@@ -323,7 +323,8 @@ update session msg model =
                 => Cmd.batch
                     [ Cmd.map TabMsg subCmd
                     , refreshPage updatedMainTab updatedModel
-                    , Route.modifyUrl (Route.WindowArena newArenaArg)
+
+                    --, Route.modifyUrl (Route.WindowArena newArenaArg)
                     ]
 
         TabMsg (Tab.ToggleSort columnName) ->
@@ -350,7 +351,8 @@ update session msg model =
                 => Cmd.batch
                     [ Cmd.map TabMsg subCmd
                     , refreshPage updatedMainTab updatedModel
-                    , Route.modifyUrl (Route.WindowArena updatedModel.arenaArg)
+
+                    --, Route.modifyUrl (Route.WindowArena updatedModel.arenaArg)
                     ]
 
         TabMsg tabMsg ->

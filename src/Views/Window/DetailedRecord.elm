@@ -1139,7 +1139,8 @@ updateDrag session drag model =
             updatedModel2
                 => Cmd.batch
                     [ subCmd
-                    , Route.modifyUrl (Route.WindowArena updatedModel2.arenaArg)
+
+                    --, Route.modifyUrl (Route.WindowArena updatedModel2.arenaArg)
                     ]
 
 
@@ -1319,7 +1320,9 @@ update session msg model =
                     }
             in
             { model | arenaArg = newArenaArg }
-                => Route.modifyUrl (Route.WindowArena newArenaArg)
+                => Cmd.batch
+                    [--Route.modifyUrl (Route.WindowArena newArenaArg)
+                    ]
 
         ToolbarMsg Toolbar.ClickedSaveOnDetail ->
             let
