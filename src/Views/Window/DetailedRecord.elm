@@ -1203,11 +1203,22 @@ update session msg model =
                 ( newTabModel, subCmd ) =
                     Tab.update tabMsg tabModel
 
+                action =
+                    model.arenaArg.action
+
+                doRequestPage =
+                    case action of
+                        Select _ ->
+                            requestNextPage section newTabModel model
+
+                        _ ->
+                            Cmd.none
+
                 ( updatedTabModel, tabCmd ) =
                     case Tab.pageRequestNeeded newTabModel of
                         True ->
                             { newTabModel | pageRequestInFlight = True }
-                                => requestNextPage section newTabModel model
+                                => doRequestPage
 
                         False ->
                             newTabModel => Cmd.none

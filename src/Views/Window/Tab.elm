@@ -899,8 +899,12 @@ update msg model =
                 => Cmd.none
 
         SaveChangesSucceed rows ->
-            { model | newRows = [] }
-                => Cmd.none
+            let
+                updatedModel =
+                    { model | newRows = [] }
+            in
+            updatedModel
+                => refreshPageRows updatedModel
 
         SaveChangesErrored e ->
             { model | errors = model.errors ++ [ e ] }
@@ -1056,7 +1060,6 @@ update msg model =
             model
                 => Cmd.batch
                     [ requestSaveTabRowsChanges settings tableName forSave
-                    , refreshPageRows model
                     ]
 
         ToolbarMsg Toolbar.ClickedRefresh ->
