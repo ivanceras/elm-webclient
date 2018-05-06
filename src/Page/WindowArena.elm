@@ -415,30 +415,11 @@ update session msg model =
                 => initSelectedRowTask
 
         InitializedSelectedRow ( selectedRow, recordId ) ->
-            let
-                ( updatedActiveWindow, windowCmd ) =
-                    case model.activeWindow of
-                        Just activeWindow ->
-                            let
-                                ( updatedWindow, windowCmd ) =
-                                    case recordId of
-                                        Just recordId ->
-                                            Window.update session (Window.TabMsg (Tab.SetFocusedRecord recordId)) activeWindow
-
-                                        Nothing ->
-                                            ( activeWindow, Cmd.none )
-                            in
-                            ( Just updatedWindow, Cmd.map WindowMsg windowCmd )
-
-                        Nothing ->
-                            ( Nothing, Cmd.none )
-            in
             { model
                 | selectedRow = Just selectedRow
                 , loadingSelectedRecord = False
-                , activeWindow = updatedActiveWindow
             }
-                => windowCmd
+                => Cmd.none
 
         FailedToInitializeSelectedRow ->
             { model

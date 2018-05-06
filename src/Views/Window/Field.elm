@@ -28,7 +28,7 @@ import Date.Format
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (checked, class, classList, for, id, name, selected, src, style, type_, value)
-import Html.Events exposing (onCheck, onClick, onInput)
+import Html.Events exposing (onBlur, onCheck, onClick, onFocus, onInput)
 import Ionicon
 import Route exposing (Route)
 import Util exposing ((=>), Scroll, px)
@@ -47,6 +47,7 @@ type alias Model =
     , editValue : Maybe Value
     , dropdownInfo : Maybe DropdownInfo
     , allotedTabWidth : Int
+    , isFocused : Bool
     }
 
 
@@ -121,6 +122,7 @@ init allotedTabWidth presentation action record tab field =
     , editValue = editValue
     , dropdownInfo = dropdownInfo
     , allotedTabWidth = allotedTabWidth
+    , isFocused = False
     }
 
 
@@ -301,6 +303,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                     , styles
                     , value valueString
                     , onInput StringValueChanged
+                    , onFocus FieldFocused
+                    , onBlur FieldBlurred
                     ]
                     []
                 )
@@ -321,6 +325,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                                 [ class "primary-link"
                                 , onClick (PrimaryLinkClicked tableName recordIdString)
                                 , Route.href (Route.WindowArena (WindowArena.initArgWithRecordId tableName recordIdString))
+                                , onFocus FieldFocused
+                                , onBlur FieldBlurred
                                 ]
                                 [ text valueString ]
                             ]
@@ -333,6 +339,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                             , styles
                             , value valueString
                             , onInput StringValueChanged
+                            , onFocus FieldFocused
+                            , onBlur FieldBlurred
                             ]
                             []
                         )
@@ -348,6 +356,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                             , style [ ( "min-height", px 24 ) ]
                             , style [ ( "min-width", px 100 ) ]
                             , onInput StringValueChanged
+                            , onFocus FieldFocused
+                            , onBlur FieldBlurred
                             ]
                             []
                         )
@@ -359,6 +369,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                             , styles
                             , value valueString
                             , onInput StringValueChanged
+                            , onFocus FieldFocused
+                            , onBlur FieldBlurred
                             ]
                             []
                         )
@@ -371,6 +383,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                     , value valueString
                     , class "uuid-textbox"
                     , onInput StringValueChanged
+                    , onFocus FieldFocused
+                    , onBlur FieldBlurred
                     ]
                     []
                 )
@@ -382,6 +396,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                     , styles
                     , value valueString
                     , onInput StringValueChanged
+                    , onFocus FieldFocused
+                    , onBlur FieldBlurred
                     ]
                     []
                 )
@@ -404,6 +420,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                                 [ type_ "checkbox"
                                 , checkedValue
                                 , onCheck BoolValueChanged
+                                , onFocus FieldFocused
+                                , onBlur FieldBlurred
                                 ]
                                 []
 
@@ -411,6 +429,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                             input
                                 [ type_ "checkbox"
                                 , onCheck BoolValueChanged
+                                , onFocus FieldFocused
+                                , onBlur FieldBlurred
                                 ]
                                 []
             in
@@ -418,6 +438,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                 (div
                     [ class "checkbox-value"
                     , styles
+                    , onFocus FieldFocused
+                    , onBlur FieldBlurred
                     ]
                     [ viewCheckbox ]
                 )
@@ -499,6 +521,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                                 , input
                                     [ id rowFileInputLabel
                                     , type_ "file"
+                                    , onFocus FieldFocused
+                                    , onBlur FieldBlurred
                                     ]
                                     []
                                 ]
@@ -522,6 +546,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                                 , input
                                     [ id fileInputLabel
                                     , type_ "file"
+                                    , onFocus FieldFocused
+                                    , onBlur FieldBlurred
                                     ]
                                     []
                                 ]
@@ -542,6 +568,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                                             , value choice
                                             , checked (choice == valueString)
                                             , id choice
+                                            , onFocus FieldFocused
+                                            , onBlur FieldBlurred
                                             ]
                                             []
                                         , label [ for choice ]
@@ -573,6 +601,8 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                                     option
                                         [ value v
                                         , selected isSelected
+                                        , onFocus FieldFocused
+                                        , onBlur FieldBlurred
                                         ]
                                         [ text v ]
                                 )
@@ -723,8 +753,11 @@ viewDatePicker styles maybeValue =
         format =
             "%Y-%m-%dT%H:%M:%S"
 
+        simpleFormat =
+            "%Y-%m-%d"
+
         iso8601format v =
-            Date.Format.format format v
+            Date.Format.format simpleFormat v
 
         dateString =
             case maybeValue of
@@ -753,6 +786,8 @@ viewDatePicker styles maybeValue =
         , styles
         , value dateString
         , onInput TimestampValueChanged
+        , onFocus FieldFocused
+        , onBlur FieldBlurred
         ]
         []
 
@@ -766,6 +801,8 @@ type Msg
     | ResetChanges
     | SetValue Value
     | PrimaryLinkClicked TableName String
+    | FieldFocused
+    | FieldBlurred
 
 
 type Widget
@@ -868,6 +905,14 @@ update msg model =
         -- this should be listened in the windowArena
         PrimaryLinkClicked tableName recordIdString ->
             model => Cmd.none
+
+        FieldFocused ->
+            { model | isFocused = True }
+                => Cmd.none
+
+        FieldBlurred ->
+            { model | isFocused = False }
+                => Cmd.none
 
 
 updateWidgetValue : Model -> Maybe Value -> Widget

@@ -1106,3 +1106,7 @@ a.primary-link {
     display: flex;
     flex-direction: row;
 }
+
+.row-focused {
+    background-color: #f5f5f4;
+}

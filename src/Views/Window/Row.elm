@@ -41,8 +41,13 @@ type alias Model =
     , record : Record
     , tab : Tab
     , fields : List Field.Model
-    , isFocused : Bool
     }
+
+
+isRowFocused : Model -> Bool
+isRowFocused model =
+    List.any .isFocused
+        model.fields
 
 
 {-|
@@ -72,14 +77,13 @@ isModified model =
     List.any Field.isModified model.fields
 
 
-init : Action -> Bool -> RecordId -> Record -> Tab -> Model
-init action isFocused recordId record tab =
+init : Action -> RecordId -> Record -> Tab -> Model
+init action recordId record tab =
     { selected = False
     , recordId = recordId
     , record = record
     , tab = tab
     , fields = createFields action record tab
-    , isFocused = isFocused
     }
 
 
@@ -110,7 +114,10 @@ view lookup model =
     div [ class "tab-row-wrapper" ]
         [ div
             [ class "tab-row"
-            , classList [ ( "is-modified", isModified model ) ]
+            , classList
+                [ ( "is-modified", isModified model )
+                , ( "row-focused", isRowFocused model )
+                ]
             ]
             (List.map
                 (\value ->
@@ -137,29 +144,14 @@ view lookup model =
 
 viewRowControls : Model -> RecordId -> Tab -> Html Msg
 viewRowControls model recordId tab =
-    div [ class "row-controls" ]
-        [ viewFocusIndicator model
-        , viewSelectionControl model
+    div
+        [ class "row-controls"
+        ]
+        [ viewSelectionControl model
         , viewRecordDetail recordId tab
         , viewCopyControl recordId tab
         , viewUndo model
         , viewSave model
-        ]
-
-
-viewFocusIndicator : Model -> Html Msg
-viewFocusIndicator model =
-    let
-        iconColor =
-            Constant.iconColor
-
-        iconSize =
-            Constant.iconSize
-    in
-    div [ class "row-focus-indicator" ]
-        [ i [ class "fa" ]
-            [ Ionicon.play iconSize iconColor ]
-            |> viewIf model.isFocused
         ]
 
 
@@ -289,7 +281,6 @@ type Msg
     | ToggleSelect Bool
     | ClickedDetailedLink
     | ClickedCopyRecord
-    | SetFocused Bool
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -344,10 +335,6 @@ update msg model =
         -- handled in WindowArena
         ClickedCopyRecord ->
             model => Cmd.none
-
-        SetFocused v ->
-            { model | isFocused = v }
-                => Cmd.none
 
 
 updateFields : Field.Msg -> Model -> List ( Field.Model, Cmd Field.Msg )

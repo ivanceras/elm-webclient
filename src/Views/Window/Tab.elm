@@ -300,16 +300,8 @@ createRowsModel selectedRecordId tab rows =
             let
                 recordId =
                     Tab.recordId record tab
-
-                isFocused =
-                    case selectedRecordId of
-                        Just focusRecordId ->
-                            recordId == focusRecordId
-
-                        Nothing ->
-                            False
             in
-            Row.init WindowArena.ListPage isFocused recordId record tab
+            Row.init WindowArena.ListPage recordId record tab
         )
         recordList
 
@@ -857,7 +849,6 @@ type Msg
     | SearchboxMsg Searchbox.Model Searchbox.Msg
     | ToggleSelectAllRows Bool
     | ToolbarMsg Toolbar.Msg
-    | SetFocusedRecord RecordId
     | ToggleSort String
 
 
@@ -1139,17 +1130,18 @@ update msg model =
             in
             model => Cmd.none
 
-        SetFocusedRecord recordId ->
-            let
-                newModel =
-                    { model | selectedRecordId = Just recordId }
+        {-
+           SetFocusedRecord recordId ->
+               let
+                   newModel =
+                       { model | selectedRecordId = Just recordId }
 
-                ( pageRows, cmds ) =
-                    updateAllRowsSetFocusedRecord recordId newModel.pageRows
-            in
-            { newModel | pageRows = pageRows }
-                => Cmd.batch cmds
-
+                   ( pageRows, cmds ) =
+                       updateAllRowsSetFocusedRecord recordId newModel.pageRows
+               in
+               { newModel | pageRows = pageRows }
+                   => Cmd.batch cmds
+        -}
         ToggleSort columnName ->
             let
                 _ =
@@ -1239,7 +1231,7 @@ insertNewRow model =
             Record.empty
 
         newRow =
-            Row.init (WindowArena.NewRecord Presentation.InList) True newRecordId emptyRecord model.tab
+            Row.init (WindowArena.NewRecord Presentation.InList) newRecordId emptyRecord model.tab
     in
     { model | newRows = model.newRows ++ [ newRow ] }
         => Cmd.none
@@ -1291,30 +1283,33 @@ toggleSelectAllRows value pageList =
     ( updatedRowModel, List.concat rowCmds )
 
 
-updateAllRowsSetFocusedRecord : RecordId -> List (List Row.Model) -> ( List (List Row.Model), List (Cmd Msg) )
-updateAllRowsSetFocusedRecord recordId pageList =
-    let
-        ( updatedRowModel, rowCmds ) =
-            List.map
-                (\page ->
-                    List.map
-                        (\row ->
-                            let
-                                isFocused =
-                                    row.recordId == recordId
 
-                                ( updatedRow, rowCmd ) =
-                                    Row.update (Row.SetFocused isFocused) row
-                            in
-                            ( updatedRow, rowCmd |> Cmd.map (RowMsg updatedRow) )
-                        )
-                        page
-                        |> List.unzip
-                )
-                pageList
-                |> List.unzip
-    in
-    ( updatedRowModel, List.concat rowCmds )
+{-
+   updateAllRowsSetFocusedRecord : RecordId -> List (List Row.Model) -> ( List (List Row.Model), List (Cmd Msg) )
+   updateAllRowsSetFocusedRecord recordId pageList =
+       let
+           ( updatedRowModel, rowCmds ) =
+               List.map
+                   (\page ->
+                       List.map
+                           (\row ->
+                               let
+                                   isFocused =
+                                       row.recordId == recordId
+
+                                   ( updatedRow, rowCmd ) =
+                                       Row.update (Row.SetFocused isFocused) row
+                               in
+                               ( updatedRow, rowCmd |> Cmd.map (RowMsg updatedRow) )
+                           )
+                           page
+                           |> List.unzip
+                   )
+                   pageList
+                   |> List.unzip
+       in
+       ( updatedRowModel, List.concat rowCmds )
+-}
 
 
 subscriptions : Model -> Sub Msg
