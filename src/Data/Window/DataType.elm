@@ -39,6 +39,7 @@ type DataType
     | TimestampTz
     | Time
     | TimeTz
+    | Point
     | Enum ( String, List String )
     | ArrayType DataType
 
@@ -144,6 +145,9 @@ simpleDecoder =
 
                     "TimeTz" ->
                         Decode.succeed TimeTz
+
+                    "Point" ->
+                        Decode.succeed Point
 
                     _ ->
                         Decode.fail ("not yet dealt with: " ++ val)

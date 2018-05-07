@@ -4,7 +4,7 @@ import Date exposing (Date)
 import Date.Extra.Config.Config_en_us
 import Date.Format
 import DateParser
-import Json.Decode as Decode exposing (Decoder)
+import Json.Decode as Decode exposing (Decoder, field)
 import Json.Decode.Extra
 import Json.Decode.Pipeline as Pipeline exposing (decode, required)
 import Json.Encode as Encode
@@ -31,6 +31,13 @@ type Value
     | Blob String
     | ImageUri String
     | Array ArrayValue
+    | Point Point2
+
+
+type alias Point2 =
+    { x : Float
+    , y : Float
+    }
 
 
 type ArrayValue
@@ -61,6 +68,7 @@ decoder =
         , uuidDecoder
         , blobDecoder
         , imageUriDecoder
+        , pointDecoder
         , arrayDecoder
         ]
 
@@ -202,6 +210,9 @@ encoder value =
         ImageUri v ->
             imageUriEncoder v
 
+        Point v ->
+            pointEncoder v
+
         Array v ->
             arrayValueEncoder v
 
@@ -221,6 +232,28 @@ tinyintDecoder : Decoder Value
 tinyintDecoder =
     decode Tinyint
         |> required "Tinyint" Decode.int
+
+
+pointEncoder : Point2 -> Encode.Value
+pointEncoder point =
+    Encode.object
+        [ ( "Point"
+          , Encode.object
+                [ ( "x", Encode.float point.x )
+                , ( "y", Encode.float point.y )
+                ]
+          )
+        ]
+
+
+pointDecoder : Decoder Value
+pointDecoder =
+    decode Point
+        |> required "Point"
+            (decode Point2
+                |> required "x" Decode.float
+                |> required "y" Decode.float
+            )
 
 
 tinyintEncoder : Int -> Encode.Value
@@ -557,6 +590,9 @@ valueToString value =
 
         ImageUri v ->
             v
+
+        Point { x, y } ->
+            "(" ++ toString x ++ ", " ++ toString y ++ ")"
 
         Array v ->
             toString v
