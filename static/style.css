@@ -200,6 +200,13 @@ textarea {
 input.uuid-textbox{
     font-family: monospace;
 }
+input[type='checkbox'] {
+    width: 10px;
+}
+
+input.filter-value{
+    padding: 1px 1px;
+}
 
 a.primary-link {
     font-family: monospace;
@@ -219,6 +226,9 @@ a.primary-link {
 .widget-value{
     padding: 0 5px;
     text-align: center;
+}
+.widget-value input {
+    padding: 3px 3px;
 }
 
 .widget-value.is-modified,
@@ -975,6 +985,9 @@ a.primary-link {
 .date-range-filter {
     display:flex;
     padding: 0 5px;
+}
+.date-range-filter input {
+    padding: 1px 1px;
 }
 
 .date-range-filter .start-date {
