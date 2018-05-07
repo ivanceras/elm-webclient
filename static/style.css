@@ -204,7 +204,8 @@ input.uuid-textbox{
     font-family: monospace;
 }
 input[type='checkbox'] {
-    width: 10px;
+    width: 18px;
+    height: 18px;
 }
 
 input.filter-value{
