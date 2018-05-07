@@ -119,6 +119,9 @@ textarea {
     font-size: 18px;
     text-align: center;
 }
+.nav-group-item.active{
+    background-color: #ddd;
+}
 
 
 #banner{
