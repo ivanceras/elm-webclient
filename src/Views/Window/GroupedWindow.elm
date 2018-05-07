@@ -87,7 +87,7 @@ init settings session activeWindow =
 
 view : Model -> Html Msg
 view model =
-    div [ class "groupedWindow-toggle" ]
+    div [ class "grouped-window-list" ]
         (viewWindowNames model)
 
 

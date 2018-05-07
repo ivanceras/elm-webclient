@@ -26,7 +26,7 @@ import Data.Window.Value as Value exposing (Value)
 import Data.WindowArena as WindowArena exposing (Action(..), ArenaArg, Section(..))
 import Dict
 import Html exposing (..)
-import Html.Attributes exposing (attribute, class, classList, href, id, placeholder, src, style)
+import Html.Attributes exposing (attribute, class, classList, draggable, href, id, placeholder, src, style)
 import Html.Events exposing (on, onClick)
 import Http
 import Json.Decode as Decode
@@ -733,7 +733,11 @@ view model =
             (div
                 [ class "detail-tabs-with-separator"
                 ]
-                [ div [ onMouseDown, class "detail-separator" ]
+                [ div
+                    [ onMouseDown
+                    , class "detail-separator"
+                    , draggable "true"
+                    ]
                     [ i
                         [ class "icon icon-dot-3"
                         ]

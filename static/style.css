@@ -83,7 +83,6 @@ textarea {
     min-width: 150px;
 }
 .pane {
-    overflow-y: auto;
     flex: 1;
     border-left: 1px solid #ddd;
 }
@@ -416,8 +415,9 @@ a.primary-link {
 }
 
 .list-view-rows {
-    overflow: auto;
+    overflow: scroll;
     background-color: #fff;
+    -webkit-overflow-scrolling: touch;
 }
 
 .empty-list-view-rows {
@@ -539,9 +539,16 @@ a.primary-link {
     color: #688a02;
 }
 
+.grouped-window-list {
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+}
+
 .main-tab-selected {
-    overflow: auto;
+    overflow-y: scroll;
     background-color: #fff;
+    -webkit-overflow-scrolling: touch;
+
 }
 
 .detail-tabs-with-separator {
