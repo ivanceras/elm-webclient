@@ -150,9 +150,10 @@ view list model =
                 , ( "width", px widgetWidth )
                 ]
     in
-    div []
+    div [ class "dropdown-display" ]
         [ viewInputButton styles list model
-        , viewIf model.opened (viewDropdown styles list model)
+        , viewDropdown styles list model
+            |> viewIf model.opened
         ]
 
 

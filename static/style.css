@@ -622,9 +622,12 @@ a.primary-link {
 .monospaced {
     font-family: monospace;
 }
+.dropdown-display {
+    position: relative;
+}
 
 .dropdown-select {
-    position: absolute;
+    position: relative;
     background-color: #fff;
     z-index: 99999;
     max-height: 200px;
