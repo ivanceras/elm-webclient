@@ -736,7 +736,6 @@ view model =
                 [ div
                     [ onMouseDown
                     , class "detail-separator"
-                    , draggable "true"
                     ]
                     [ i
                         [ class "icon icon-dot-3"

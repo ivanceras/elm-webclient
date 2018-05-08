@@ -87,7 +87,7 @@ init settings session activeWindow =
 
 view : Model -> Html Msg
 view model =
-    div [ class "grouped-window-list" ]
+    div []
         (viewWindowNames model)
 
 

@@ -180,7 +180,7 @@ view session model =
         [ viewBanner model
         , div [ class "window-content" ]
             [ div [ class "pane-group" ]
-                [ div [ class "pane pane-sm sidebar" ]
+                [ div [ class "pane pane-sm sidebar grouped-window-list" ]
                     [ GroupedWindow.view model.groupedWindow
                         |> Html.map GroupedWindowMsg
                     ]

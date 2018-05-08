@@ -415,7 +415,7 @@ a.primary-link {
 }
 
 .list-view-rows {
-    overflow: scroll;
+    overflow: auto;
     background-color: #fff;
     -webkit-overflow-scrolling: touch;
 }
@@ -540,12 +540,12 @@ a.primary-link {
 }
 
 .grouped-window-list {
-    overflow-y: scroll;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 }
 
 .main-tab-selected {
-    overflow-y: scroll;
+    overflow-y: auto;
     background-color: #fff;
     -webkit-overflow-scrolling: touch;
 
