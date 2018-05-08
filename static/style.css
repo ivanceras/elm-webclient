@@ -232,6 +232,7 @@ a.primary-link {
 }
 .widget-value input {
     padding: 3px 3px;
+    margin-top: 1px;
 }
 
 .widget-value.is-modified,
