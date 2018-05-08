@@ -949,75 +949,83 @@ viewDetailTabs model =
                         listView isActive model.lookup Indirect indirectTab
                     )
                     indirectTabs
+
+        ( allotedWidth, allotedHeight ) =
+            detailAllotedSize model
     in
     if List.length detailTabs > 0 then
         div []
-            [ div [ class "detail-tab-names" ]
-                (List.map
-                    (\( section, tabModel, linker ) ->
-                        let
-                            tab : Tab
-                            tab =
-                                tabModel.tab
+            [ div
+                [ class "detail-tab-names-container"
+                , style [ ( "width", px (allotedWidth + 100) ) ]
+                ]
+                [ div [ class "detail-tab-names" ]
+                    (List.map
+                        (\( section, tabModel, linker ) ->
+                            let
+                                tab : Tab
+                                tab =
+                                    tabModel.tab
 
-                            isActiveTab =
-                                case activeTab of
-                                    Just ( activeSection, activeTable, activeLinker ) ->
-                                        section
-                                            == activeSection
-                                            && activeTable
-                                            == tab.tableName
-                                            && linker
-                                            == activeLinker
+                                isActiveTab =
+                                    case activeTab of
+                                        Just ( activeSection, activeTable, activeLinker ) ->
+                                            section
+                                                == activeSection
+                                                && activeTable
+                                                == tab.tableName
+                                                && linker
+                                                == activeLinker
 
-                                    Nothing ->
-                                        False
+                                        Nothing ->
+                                            False
 
-                            arenaArg =
-                                model.arenaArg
+                                arenaArg =
+                                    model.arenaArg
 
-                            -- Clicking will open the tab,
-                            -- opening the tab in a new tab will open it in it's own window
-                            tabLinkArenaArg =
-                                WindowArena.initArg (Just tab.tableName)
+                                -- Clicking will open the tab,
+                                -- opening the tab in a new tab will open it in it's own window
+                                tabLinkArenaArg =
+                                    WindowArena.initArg (Just tab.tableName)
 
-                            viaLinker =
-                                case linker of
-                                    Just linker ->
-                                        " , and are connected through " ++ linker.name
+                                viaLinker =
+                                    case linker of
+                                        Just linker ->
+                                            " , and are connected through " ++ linker.name
 
-                                    Nothing ->
-                                        ""
+                                        Nothing ->
+                                            ""
 
-                            tooltipText =
-                                mainTabName ++ " has many " ++ tab.name ++ ", while " ++ tab.name ++ " can also have many " ++ mainTabName ++ viaLinker
-                        in
-                        a
-                            [ class "detail-tab-name"
-                            , classList
-                                [ ( "has-many-tab", section == HasMany )
-                                , ( "indirect-tab", section == Indirect )
-                                , ( "active-detail-tab", isActiveTab )
+                                tooltipText =
+                                    mainTabName ++ " has many " ++ tab.name ++ ", while " ++ tab.name ++ " can also have many " ++ mainTabName ++ viaLinker
+                            in
+                            a
+                                [ class "detail-tab-name"
+                                , classList
+                                    [ ( "has-many-tab", section == HasMany )
+                                    , ( "indirect-tab", section == Indirect )
+                                    , ( "active-detail-tab", isActiveTab )
+                                    ]
+                                , Route.href (Route.WindowArena tabLinkArenaArg)
+                                , onClickPreventDefault (ChangeActiveTab section tab.tableName linker)
                                 ]
-                            , Route.href (Route.WindowArena tabLinkArenaArg)
-                            , onClickPreventDefault (ChangeActiveTab section tab.tableName linker)
-                            ]
-                            [ div [ class "tab-name-wrapper" ]
-                                [ text tab.name
-                                , div
-                                    [ class "tab-relation tooltip"
-                                    , classList
-                                        [ ( "ion-network", section == Indirect )
+                                [ div [ class "tab-name-wrapper" ]
+                                    [ text tab.name
+                                    , div
+                                        [ class "tab-relation tooltip"
+                                        , classList
+                                            [ ( "ion-network", section == Indirect )
+                                            ]
+                                        ]
+                                        [ span [ class "tooltip-text" ]
+                                            [ text tooltipText ]
                                         ]
                                     ]
-                                    [ span [ class "tooltip-text" ]
-                                        [ text tooltipText ]
-                                    ]
                                 ]
-                            ]
+                        )
+                        detailTabs
                     )
-                    detailTabs
-                )
+                ]
             , div [ class "detail-tabs" ]
                 detailTabViews
             ]
