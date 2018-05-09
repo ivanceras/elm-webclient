@@ -294,6 +294,9 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                             px widgetWidth
                   )
                 ]
+
+        dataType =
+            Field.dataType field
     in
     case widget of
         Textbox ->
@@ -850,8 +853,37 @@ update msg model =
 
         StringValueChanged v ->
             let
+                dataType =
+                    Field.dataType model.field
+
                 value =
-                    Value.Text v
+                    case dataType of
+                        DataType.Double ->
+                            case String.toFloat v of
+                                Ok f ->
+                                    Value.Double f
+
+                                Err e ->
+                                    Value.Nil
+
+                        DataType.Float ->
+                            case String.toFloat v of
+                                Ok f ->
+                                    Value.Float f
+
+                                Err e ->
+                                    Value.Nil
+
+                        DataType.Int ->
+                            case String.toInt v of
+                                Ok f ->
+                                    Value.Int f
+
+                                Err e ->
+                                    Value.Nil
+
+                        _ ->
+                            Value.Text v
             in
             { model | editValue = Just value }
                 => Cmd.none

@@ -4,6 +4,7 @@ module Data.Window.Field
         , FieldWidth(..)
         , cast
         , columnName
+        , dataType
         , decoder
         , displayColumns
         , displayValues
@@ -133,6 +134,21 @@ sourceTable field =
 type ColumnDetail
     = Simple ( ColumnName, DataType )
     | Compound (List ( ColumnName, DataType ))
+
+
+dataType : Field -> DataType
+dataType field =
+    case field.columnDetail of
+        Simple ( columnName, dataType ) ->
+            dataType
+
+        Compound dataTypes ->
+            case List.head dataTypes of
+                Just ( columnName, dataType ) ->
+                    dataType
+
+                Nothing ->
+                    Debug.crash "Compound must have data type"
 
 
 fieldDataTypes : Field -> List DataType

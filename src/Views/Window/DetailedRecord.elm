@@ -301,6 +301,7 @@ getChangeset model =
     , hasMany =
         getHasManyUpdatedRows model
             ++ getHasManyLinkNewRows model
+            ++ getHasManyUnlinkedRows model
     , indirect =
         getIndirectLinkNewRows model
             ++ getIndirectUnlinkedRows model
@@ -430,6 +431,19 @@ getIndirectUnlinkedRows model =
             ( indirect.tab.tableName, viaTableName, Unlink, unlinkedRows )
         )
         model.indirectTabs
+
+
+getHasManyUnlinkedRows : Model -> List ( TableName, RecordLinkAction, Rows )
+getHasManyUnlinkedRows model =
+    List.map
+        (\hasMany ->
+            let
+                unlinkedRows =
+                    Tab.getUnlinkedRows hasMany
+            in
+            ( hasMany.tab.tableName, Unlink, unlinkedRows )
+        )
+        model.hasManyTabs
 
 
 initialPosition : Float -> Bool -> BrowserWindow.Size -> Position
