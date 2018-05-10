@@ -27,7 +27,7 @@ import Date
 import Date.Format
 import Dict
 import Html exposing (..)
-import Html.Attributes exposing (checked, class, classList, for, id, name, selected, src, style, type_, value)
+import Html.Attributes exposing (checked, class, classList, for, id, name, selected, src, step, style, type_, value)
 import Html.Events exposing (onBlur, onCheck, onClick, onFocus, onInput)
 import Ionicon
 import Route exposing (Route)
@@ -299,6 +299,35 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
             Field.dataType field
     in
     case widget of
+        IntegerTextbox ->
+            HtmlWidget
+                (input
+                    [ type_ "number"
+                    , styles
+                    , value valueString
+                    , onInput IntegerValueChanged
+                    , onFocus FieldFocused
+                    , onBlur FieldBlurred
+                    ]
+                    []
+                )
+
+        DecimalTextbox ->
+            HtmlWidget
+                (input
+                    [ type_ "number"
+                    , styles
+
+                    --TODO: step could be depending on the decimal places set in the column values
+                    , step "any"
+                    , value valueString
+                    , onInput DecimalValueChanged
+                    , onFocus FieldFocused
+                    , onBlur FieldBlurred
+                    ]
+                    []
+                )
+
         Textbox ->
             HtmlWidget
                 (input
@@ -799,6 +828,8 @@ type Msg
     = DropdownDisplayMsg DropdownDisplay.Model DropdownDisplay.Msg
     | FixDropdownMsg FixDropdown.Model FixDropdown.Msg
     | StringValueChanged String
+    | IntegerValueChanged String
+    | DecimalValueChanged String
     | TimestampValueChanged String
     | BoolValueChanged Bool
     | ResetChanges
@@ -850,6 +881,102 @@ update msg model =
 
                 _ ->
                     model => Cmd.none
+
+        IntegerValueChanged v ->
+            let
+                dataType =
+                    Field.dataType model.field
+
+                intValue =
+                    String.toInt v
+
+                value =
+                    case dataType of
+                        DataType.Tinyint ->
+                            case intValue of
+                                Ok f ->
+                                    Value.Int f
+
+                                Err e ->
+                                    Value.Nil
+
+                        DataType.Smallint ->
+                            case intValue of
+                                Ok f ->
+                                    Value.Int f
+
+                                Err e ->
+                                    Value.Nil
+
+                        DataType.Int ->
+                            case intValue of
+                                Ok f ->
+                                    Value.Int f
+
+                                Err e ->
+                                    Value.Nil
+
+                        DataType.Bigint ->
+                            case intValue of
+                                Ok f ->
+                                    Value.Int f
+
+                                Err e ->
+                                    Value.Nil
+
+                        _ ->
+                            Value.Nil
+            in
+            { model | editValue = Just value }
+                => Cmd.none
+
+        DecimalValueChanged v ->
+            let
+                dataType =
+                    Field.dataType model.field
+
+                floatValue =
+                    String.toFloat v
+
+                value =
+                    case dataType of
+                        DataType.Double ->
+                            case floatValue of
+                                Ok f ->
+                                    Value.Double f
+
+                                Err e ->
+                                    Value.Nil
+
+                        DataType.Float ->
+                            case floatValue of
+                                Ok f ->
+                                    Value.Float f
+
+                                Err e ->
+                                    Value.Nil
+
+                        DataType.Real ->
+                            case floatValue of
+                                Ok f ->
+                                    Value.Float f
+
+                                Err e ->
+                                    Value.Nil
+
+                        DataType.Numeric ->
+                            case floatValue of
+                                Ok f ->
+                                    Value.BigDecimal f
+
+                                Err e ->
+                                    Value.Nil
+
+                        _ ->
+                            Value.Nil
+            in
+            { model | editValue = Just value }
+                => Cmd.none
 
         StringValueChanged v ->
             let

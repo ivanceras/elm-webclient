@@ -58,6 +58,8 @@ alignmentToString alignment =
 
 type Widget
     = Textbox
+    | IntegerTextbox
+    | DecimalTextbox
     | UuidTextbox
     | Password
     | TagSelection
@@ -122,6 +124,12 @@ simpleDecoder =
                 case val of
                     "Textbox" ->
                         Decode.succeed Textbox
+
+                    "IntegerTextbox" ->
+                        Decode.succeed IntegerTextbox
+
+                    "DecimalTextbox" ->
+                        Decode.succeed DecimalTextbox
 
                     "UuidTextbox" ->
                         Decode.succeed UuidTextbox

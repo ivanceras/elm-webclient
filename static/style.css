@@ -644,18 +644,23 @@ a.primary-link {
 .monospaced {
     font-family: monospace;
 }
+.dropdown-display-wrapper{
+    position: relative;
+    display: inline-block;
+}
 .dropdown-display {
     position: relative;
 }
 
 .dropdown-select {
-    position: relative;
+    position: absolute;
     background-color: #fff;
     z-index: 99999;
     max-height: 200px;
     overflow: auto;
     border: 1px solid #ccc;
-    margin-top: 5px;
+    margin-top: 3px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
 }
 
 .dropdown-select .dropdown-option {
