@@ -14,7 +14,6 @@ module Data.Window.Field
         , firstColumnName
         , fontSize
         , shortOrLongWidth
-        , simpleDataType
         , sourceTable
         , widgetWidthListColumn
         , widgetWidthListValue
@@ -156,28 +155,9 @@ fieldDataTypes field =
     columnDataTypes field.columnDetail
 
 
-simpleDataType : Field -> Maybe DataType
-simpleDataType field =
-    case field.columnDetail of
-        Simple ( columnName, dataType ) ->
-            Just dataType
-
-        Compound _ ->
-            Nothing
-
-
 cast : String -> Field -> Value
 cast value field =
-    let
-        dataType =
-            case simpleDataType field of
-                Just dataType ->
-                    dataType
-
-                Nothing ->
-                    Debug.crash "There should be data type"
-    in
-    case dataType of
+    case dataType field of
         DataType.Text ->
             Value.Text value
 
@@ -301,14 +281,6 @@ columnPairDecoder =
 widgetCharacterWidth : Field -> Int
 widgetCharacterWidth field =
     let
-        dataType =
-            case simpleDataType field of
-                Just dataType ->
-                    dataType
-
-                Nothing ->
-                    Debug.crash "All field have data types"
-
         dateWidth =
             16
 
@@ -316,7 +288,7 @@ widgetCharacterWidth field =
             String.length (columnName field) + 5
 
         charWidth =
-            case dataType of
+            case dataType field of
                 DataType.Date ->
                     dateWidth
 

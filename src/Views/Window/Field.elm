@@ -193,14 +193,6 @@ viewWidget lookup model =
 
                         Nothing ->
                             list
-
-                fieldDataType =
-                    case Field.simpleDataType model.field of
-                        Just dataType ->
-                            dataType
-
-                        Nothing ->
-                            Debug.crash "There should be data type"
             in
             DropdownDisplay.view listWithSelected dropdown
                 |> Html.map (DropdownDisplayMsg dropdown)
@@ -644,14 +636,6 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
 
         TableLookupDropdown ->
             let
-                fieldDataType =
-                    case Field.simpleDataType field of
-                        Just dataType ->
-                            dataType
-
-                        Nothing ->
-                            Debug.crash "unable to get data type"
-
                 dropdownModel =
                     DropdownDisplay.init alignment widgetWidth maybeValue
             in

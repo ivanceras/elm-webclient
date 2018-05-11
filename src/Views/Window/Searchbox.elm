@@ -199,14 +199,6 @@ createSearchbox model =
             alignment
                 |> Widget.alignmentToString
 
-        dataType =
-            case Field.simpleDataType field of
-                Just dataType ->
-                    dataType
-
-                Nothing ->
-                    Debug.crash "All field should have a data type"
-
         defaultWidgetWidth =
             Field.widgetWidthListValue field
 
@@ -271,6 +263,10 @@ createSearchbox model =
             dateRangeFilter noSearchStyles
 
         PrimaryUrlLink ->
+            let
+                dataType =
+                    Field.dataType field
+            in
             case dataType of
                 DataType.Tinyint ->
                     numberSearch styles value1String
