@@ -8,6 +8,7 @@ import Json.Decode as Decode exposing (Decoder, field)
 import Json.Decode.Extra
 import Json.Decode.Pipeline as Pipeline exposing (decode, required)
 import Json.Encode as Encode
+import Util
 
 
 type Value
@@ -28,10 +29,18 @@ type Value
     | DateTime Date
     | Time String
     | Timestamp Date
+    | Interval IntervalDuration
     | Blob String
     | ImageUri String
     | Array ArrayValue
     | Point Point2
+
+
+type alias IntervalDuration =
+    { microseconds : Int
+    , days : Int
+    , months : Int
+    }
 
 
 type alias Point2 =
@@ -69,6 +78,7 @@ decoder =
         , blobDecoder
         , imageUriDecoder
         , pointDecoder
+        , intervalDecoder
         , arrayDecoder
         ]
 
@@ -204,6 +214,9 @@ encoder value =
         Timestamp v ->
             timestampEncoder v
 
+        Interval v ->
+            intervalEncoder v
+
         Blob v ->
             blobEncoder v
 
@@ -246,6 +259,19 @@ pointEncoder point =
         ]
 
 
+intervalEncoder : IntervalDuration -> Encode.Value
+intervalEncoder interval =
+    Encode.object
+        [ ( "Interval"
+          , Encode.object
+                [ ( "microseconds", Encode.int interval.microseconds )
+                , ( "days", Encode.int interval.days )
+                , ( "months", Encode.int interval.months )
+                ]
+          )
+        ]
+
+
 pointDecoder : Decoder Value
 pointDecoder =
     decode Point
@@ -253,6 +279,17 @@ pointDecoder =
             (decode Point2
                 |> required "x" Decode.float
                 |> required "y" Decode.float
+            )
+
+
+intervalDecoder : Decoder Value
+intervalDecoder =
+    decode Interval
+        |> required "Interval"
+            (decode IntervalDuration
+                |> required "microseconds" Decode.int
+                |> required "days" Decode.int
+                |> required "months" Decode.int
             )
 
 
@@ -584,6 +621,22 @@ valueToString value =
 
         Timestamp v ->
             Date.Format.format "%Y-%m-%d" v
+
+        Interval v ->
+            let
+                msHours =
+                    toFloat v.microseconds / 3600000000
+
+                monthHours =
+                    toFloat v.months * 30 * 24
+
+                dayHours =
+                    toFloat v.days * 24
+
+                totalHours =
+                    Util.roundDecimal 2 (msHours + dayHours + monthHours)
+            in
+            toString totalHours ++ " hours"
 
         Blob v ->
             toString v
