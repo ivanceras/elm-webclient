@@ -645,6 +645,14 @@ a.primary-link {
     font-family: monospace;
 }
 /*
+ * Commenting this out will make the dropdown to have absolute 
+ * positioning which will work perfect in firefox, but not on webkit (the location is out of place when scrolled)
+ * Taking this code into effect will display the dropdown correctly
+ * on its place, at the cost of being overlapped by the details div, which makes it not looked like a dropdown
+ *
+ * TODO: see if it can be mitiated using this technique here: https://css-tricks.com/popping-hidden-overflow/
+ */
+/*
 .dropdown-display-wrapper{
     position: relative;
     display: inline-block;
