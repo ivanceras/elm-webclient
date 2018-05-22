@@ -91,6 +91,8 @@ type alias RecordDetailChangeset =
     , action : RecordLinkAction
     , oneOnes : List ( TableName, Maybe Record )
     , hasMany : List ( TableName, RecordLinkAction, Rows )
+
+    -- list (table, via linker, action, rows)
     , indirect : List ( TableName, TableName, RecordLinkAction, Rows )
     }
 
