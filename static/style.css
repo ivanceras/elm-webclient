@@ -644,6 +644,7 @@ a.primary-link {
 .monospaced {
     font-family: monospace;
 }
+/*
 .dropdown-display-wrapper{
     position: relative;
     display: inline-block;
@@ -651,6 +652,7 @@ a.primary-link {
 .dropdown-display {
     position: relative;
 }
+*/
 
 .dropdown-select {
     position: absolute;
