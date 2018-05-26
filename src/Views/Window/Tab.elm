@@ -4,6 +4,7 @@ module Views.Window.Tab
         , Msg(..)
         , dropdownPageRequestNeeded
         , editedRows
+        , getLinkExistingRows
         , getLinkNewRows
         , getUnlinkedRows
         , init

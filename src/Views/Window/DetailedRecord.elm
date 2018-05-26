@@ -304,6 +304,7 @@ getChangeset model =
             ++ getHasManyUnlinkedRows model
     , indirect =
         getIndirectLinkNewRows model
+            ++ getIndirectLinkExistingRows model
             ++ getIndirectUnlinkedRows model
     }
 
@@ -416,6 +417,19 @@ getIndirectLinkNewRows model =
                     Tab.getLinkNewRows indirect
             in
             ( indirect.tab.tableName, viaTableName, LinkNew, updatedRows )
+        )
+        model.indirectTabs
+
+
+getIndirectLinkExistingRows : Model -> List ( TableName, TableName, RecordLinkAction, Rows )
+getIndirectLinkExistingRows model =
+    List.map
+        (\( viaTableName, indirect ) ->
+            let
+                updatedRows =
+                    Tab.getLinkExistingRows indirect
+            in
+            ( indirect.tab.tableName, viaTableName, LinkExisting, updatedRows )
         )
         model.indirectTabs
 

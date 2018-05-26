@@ -993,6 +993,9 @@ update msg model =
                                 Err e ->
                                     Value.Nil
 
+                        DataType.Uuid ->
+                            Value.Uuid v
+
                         _ ->
                             Value.Text v
             in
