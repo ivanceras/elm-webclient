@@ -32,8 +32,8 @@ import Data.Window.TableName as TableName exposing (TableName, tableNameToString
 import Data.WindowArena as WindowArena
 import Dom.Scroll
 import Html exposing (..)
-import Html.Attributes exposing (attribute, class, classList, href, id, placeholder, src, style)
-import Html.Events exposing (onClick)
+import Html.Attributes exposing (attribute, class, classList, href, id, placeholder, src, style, type_, value)
+import Html.Events exposing (onClick, onInput)
 import Http
 import Ionicon
 import Material.Icons.Action as MaterialAction
@@ -50,19 +50,12 @@ import Views.Page exposing (bodyId)
 -- MODEL --
 
 
-type Model
-    = Model InternalModel
-
-
-{-| This should not be exposed! We want to benefit from the guarantee that only
-this module can create or alter this model. This way if it ever ends up in
-a surprising state, we know exactly where to look: this file.
--}
-type alias InternalModel =
+type alias Model =
     { errors : List String
     , groupedWindow : List GroupedWindow
     , activeWindow : Maybe TableName
     , isLoading : Bool
+    , windowSearch : String
     }
 
 
@@ -70,12 +63,12 @@ init : Settings -> Session -> Maybe TableName -> Task Http.Error Model
 init settings session activeWindow =
     let
         toModel ( activeWindow, groupedWindow ) =
-            Model
-                { errors = []
-                , activeWindow = activeWindow
-                , groupedWindow = groupedWindow
-                , isLoading = False
-                }
+            { errors = []
+            , activeWindow = activeWindow
+            , groupedWindow = groupedWindow
+            , isLoading = False
+            , windowSearch = ""
+            }
     in
     fetch settings (Maybe.map .token session.user) activeWindow
         |> Task.map toModel
@@ -87,8 +80,34 @@ init settings session activeWindow =
 
 view : Model -> Html Msg
 view model =
-    div []
-        (viewWindowNames model)
+    div [ class "grouped-window" ]
+        (textSearch model
+            :: viewWindowNames model
+        )
+
+
+textSearch : Model -> Html Msg
+textSearch model =
+    let
+        iconColor =
+            Constant.iconColor
+
+        iconSize =
+            Constant.columnSearchIconSize
+    in
+    div [ class "window-filter" ]
+        [ div [ class "filter-icon-wrapper" ]
+            [ div [ class "fa filter-value-icon" ]
+                [ Ionicon.search iconSize iconColor ]
+            ]
+        , input
+            [ class "filter-value"
+            , type_ "text" -- "search" will render badly in webkit-gtk
+            , value model.windowSearch
+            , onInput SearchValueChanged
+            ]
+            []
+        ]
 
 
 viewWindowName : Maybe TableName -> WindowName -> Html msg
@@ -137,7 +156,7 @@ viewWindowGroup activeWindow groupedWindow =
 
 
 viewWindowNames : Model -> List (Html Msg)
-viewWindowNames (Model { activeWindow, groupedWindow }) =
+viewWindowNames { activeWindow, groupedWindow } =
     List.map (viewWindowGroup activeWindow) groupedWindow
 
 
@@ -147,34 +166,17 @@ viewWindowNames (Model { activeWindow, groupedWindow }) =
 
 type Msg
     = DismissErrors
-    | FeedLoadCompleted (Result Http.Error ( Maybe TableName, List GroupedWindow ))
+    | SearchValueChanged String
 
 
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
-update session msg (Model internalModel) =
-    updateInternal session msg internalModel
-        |> Tuple.mapFirst Model
-
-
-updateInternal : Session -> Msg -> InternalModel -> ( InternalModel, Cmd Msg )
-updateInternal session msg model =
+update session msg model =
     case msg of
         DismissErrors ->
             { model | errors = [] } => Cmd.none
 
-        FeedLoadCompleted (Ok ( activeWindow, groupedWindow )) ->
-            { model
-                | groupedWindow = groupedWindow
-                , activeWindow = activeWindow
-                , isLoading = False
-            }
-                => Cmd.none
-
-        FeedLoadCompleted (Err error) ->
-            { model
-                | errors = model.errors ++ [ "Server error while trying to load groupedWindow" ]
-                , isLoading = False
-            }
+        SearchValueChanged value ->
+            { model | windowSearch = value }
                 => Cmd.none
 
 
