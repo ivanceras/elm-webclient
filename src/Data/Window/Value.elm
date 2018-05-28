@@ -116,7 +116,7 @@ textArrayDecoder =
 
 textArrayEncoder : List String -> Encode.Value
 textArrayEncoder list =
-    Encode.list (List.map textEncoder list)
+    Encode.object [ ( "Text", Encode.list (List.map Encode.string list) ) ]
 
 
 intArrayDecoder : Decoder ArrayValue
@@ -127,7 +127,7 @@ intArrayDecoder =
 
 intArrayEncoder : List Int -> Encode.Value
 intArrayEncoder list =
-    Encode.list (List.map intEncoder list)
+    Encode.object [ ( "Int", Encode.list (List.map Encode.int list) ) ]
 
 
 floatArrayDecoder : Decoder ArrayValue
@@ -138,7 +138,7 @@ floatArrayDecoder =
 
 floatArrayEncoder : List Float -> Encode.Value
 floatArrayEncoder list =
-    Encode.list (List.map floatEncoder list)
+    Encode.object [ ( "Float", Encode.list (List.map Encode.float list) ) ]
 
 
 nilDecoder : Decoder Value
@@ -227,7 +227,11 @@ encoder value =
             pointEncoder v
 
         Array v ->
-            arrayValueEncoder v
+            Encode.object
+                [ ( "Array"
+                  , arrayValueEncoder v
+                  )
+                ]
 
 
 boolDecoder : Decoder Value
