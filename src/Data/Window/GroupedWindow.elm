@@ -3,6 +3,7 @@ module Data.Window.GroupedWindow
         ( GroupedWindow
         , WindowName
         , decoder
+        , findMatch
         , windowNameDecoder
         )
 
@@ -24,6 +25,26 @@ type alias WindowName =
     , tableName : TableName
     , isView : Bool
     }
+
+
+findMatch : String -> GroupedWindow -> GroupedWindow
+findMatch searchText groupedWindow =
+    { groupedWindow | windowNames = matchWindowNames searchText groupedWindow.windowNames }
+
+
+matchWindowNames : String -> List WindowName -> List WindowName
+matchWindowNames searchText windowNames =
+    List.filter
+        (\windowName ->
+            matchWindowName searchText windowName
+        )
+        windowNames
+
+
+matchWindowName : String -> WindowName -> Bool
+matchWindowName searchText windowName =
+    String.startsWith searchText windowName.name
+        || String.startsWith searchText windowName.tableName.name
 
 
 

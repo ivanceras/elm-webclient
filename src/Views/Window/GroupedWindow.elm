@@ -53,9 +53,10 @@ import Views.Page exposing (bodyId)
 type alias Model =
     { errors : List String
     , groupedWindow : List GroupedWindow
+    , filteredWindow : List GroupedWindow
     , activeWindow : Maybe TableName
     , isLoading : Bool
-    , windowSearch : String
+    , windowSearch : Maybe String
     }
 
 
@@ -66,8 +67,9 @@ init settings session activeWindow =
             { errors = []
             , activeWindow = activeWindow
             , groupedWindow = groupedWindow
+            , filteredWindow = groupedWindow
             , isLoading = False
-            , windowSearch = ""
+            , windowSearch = Nothing
             }
     in
     fetch settings (Maybe.map .token session.user) activeWindow
@@ -94,6 +96,14 @@ textSearch model =
 
         iconSize =
             Constant.columnSearchIconSize
+
+        windowSearch =
+            case model.windowSearch of
+                Just v ->
+                    v
+
+                Nothing ->
+                    ""
     in
     div [ class "window-filter" ]
         [ div [ class "filter-icon-wrapper" ]
@@ -103,7 +113,7 @@ textSearch model =
         , input
             [ class "filter-value"
             , type_ "text" -- "search" will render badly in webkit-gtk
-            , value model.windowSearch
+            , value windowSearch
             , onInput SearchValueChanged
             ]
             []
@@ -156,8 +166,8 @@ viewWindowGroup activeWindow groupedWindow =
 
 
 viewWindowNames : Model -> List (Html Msg)
-viewWindowNames { activeWindow, groupedWindow } =
-    List.map (viewWindowGroup activeWindow) groupedWindow
+viewWindowNames model =
+    List.map (viewWindowGroup model.activeWindow) model.filteredWindow
 
 
 
@@ -176,8 +186,36 @@ update session msg model =
             { model | errors = [] } => Cmd.none
 
         SearchValueChanged value ->
-            { model | windowSearch = value }
+            let
+                updatedModel =
+                    { model
+                        | windowSearch =
+                            case value of
+                                "" ->
+                                    Nothing
+
+                                v ->
+                                    Just v
+                    }
+            in
+            updateWindowSearch updatedModel
                 => Cmd.none
+
+
+updateWindowSearch : Model -> Model
+updateWindowSearch model =
+    let
+        filteredWindow =
+            case model.windowSearch of
+                Just search ->
+                    List.map (GroupedWindow.findMatch search) model.groupedWindow
+
+                Nothing ->
+                    model.groupedWindow
+    in
+    { model
+        | filteredWindow = filteredWindow
+    }
 
 
 fetch : Settings -> Maybe AuthToken -> Maybe TableName -> Task Http.Error ( Maybe TableName, List GroupedWindow )
