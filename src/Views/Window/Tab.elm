@@ -475,8 +475,8 @@ listView lookup model =
                         , ( "width", px adjustedWidth )
                         ]
                     ]
-                    ([ viewNewRows lookup model ]
-                        ++ [ viewLinkRows lookup model ]
+                    ([ viewLinkRows lookup model ]
+                        ++ [ viewNewRows lookup model ]
                         ++ [ listViewRows lookup model ]
                     )
                 ]
