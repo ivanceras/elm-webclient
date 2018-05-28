@@ -289,7 +289,7 @@ view tabType model =
             ]
             [ i [ class "toolbar-fa" ]
                 [ Ionicon.funnel iconSize iconColor ]
-            , text "Advance filter"
+            , text "Advanced filter"
                 |> viewIf showText
             , span [ class "tooltip-text" ] [ text "Open modal filter with advance functionality" ]
             ]
