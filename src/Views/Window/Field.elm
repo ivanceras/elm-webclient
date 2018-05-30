@@ -49,6 +49,7 @@ type alias Model =
     , allotedTabWidth : Int
     , isFocused : Bool
     , containerScroll : Scroll
+    , lookup : Lookup
     }
 
 
@@ -72,8 +73,8 @@ isModified model =
     model.value /= model.editValue
 
 
-init : Int -> Presentation -> Action -> Maybe Record -> Tab -> Field -> Model
-init allotedTabWidth presentation action record tab field =
+init : Int -> Presentation -> Action -> Maybe Record -> Tab -> Lookup -> Field -> Model
+init allotedTabWidth presentation action record tab lookup field =
     let
         columnName =
             Field.columnName field
@@ -125,20 +126,21 @@ init allotedTabWidth presentation action record tab field =
     , allotedTabWidth = allotedTabWidth
     , isFocused = False
     , containerScroll = Scroll 0 0
+    , lookup = lookup
     }
 
 
-view : Lookup -> Model -> Html Msg
-view lookup model =
+view : Model -> Html Msg
+view model =
     div
         [ class "widget-value"
         , classList [ ( "is-modified", isModified model ) ]
         ]
-        [ viewWidget lookup model ]
+        [ viewWidget model ]
 
 
-viewWidget : Lookup -> Model -> Html Msg
-viewWidget lookup model =
+viewWidget : Model -> Html Msg
+viewWidget model =
     case model.widget of
         HtmlWidget html ->
             html
@@ -174,7 +176,7 @@ viewWidget lookup model =
                     dropdownInfo.source
 
                 ( page, recordList ) =
-                    Lookup.tableLookup sourceTable lookup
+                    Lookup.tableLookup sourceTable model.lookup
 
                 list =
                     listRecordToListString dropdownInfo recordList
@@ -734,8 +736,8 @@ dropdownModel model =
             Nothing
 
 
-dropdownPageRequestNeeded : Lookup -> Model -> Maybe TableName
-dropdownPageRequestNeeded lookup model =
+dropdownPageRequestNeeded : Model -> Maybe TableName
+dropdownPageRequestNeeded model =
     case dropdownModel model of
         Just dropdown ->
             case Field.dropdownInfo model.field of
@@ -745,14 +747,14 @@ dropdownPageRequestNeeded lookup model =
                             dropdownInfo.source
 
                         ( page, recordList ) =
-                            Lookup.tableLookup sourceTable lookup
+                            Lookup.tableLookup sourceTable model.lookup
 
                         list =
                             listRecordToListString dropdownInfo recordList
                     in
                     if
                         DropdownDisplay.pageRequestNeeded list dropdown
-                            && not (Lookup.hasReachedLastPage sourceTable lookup)
+                            && not (Lookup.hasReachedLastPage sourceTable model.lookup)
                     then
                         Just sourceTable
                     else
@@ -824,6 +826,7 @@ type Msg
     | FieldFocused
     | FieldBlurred
     | ContainerScrollChanged Scroll
+    | LookupChanged Lookup
 
 
 type Widget
@@ -1069,6 +1072,10 @@ update msg model =
                     { model | containerScroll = scroll }
             in
             updateDropdownDisplay (DropdownDisplay.ContainerScrollChanged scroll) updatedModel
+
+        LookupChanged lookup ->
+            { model | lookup = lookup }
+                => Cmd.none
 
 
 updateDropdownDisplay : DropdownDisplay.Msg -> Model -> ( Model, Cmd Msg )

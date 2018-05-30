@@ -43,6 +43,8 @@ import Task exposing (Task)
 import Util exposing ((=>), pair, viewIf)
 import Views.Errors
 import Views.Page as Page
+import Views.Window.Field as Field
+import Views.Window.Row as Row
 import Views.Window.Tab as Tab
 import Views.Window.Toolbar as Toolbar
 import Window as BrowserWindow
@@ -163,7 +165,7 @@ init settings session tableName window arenaArg =
         mainTabTask =
             Task.map3
                 (\records size lookup ->
-                    Tab.init arenaArg settings selectedRecordId (calcMainTabSize size) query window.mainTab InMain records
+                    Tab.init arenaArg settings selectedRecordId (calcMainTabSize size) query window.mainTab InMain records lookup
                 )
                 loadRecords
                 getBrowserSize
@@ -220,7 +222,7 @@ viewMainTab model =
             model.mainTab
     in
     div [ class "main-tab" ]
-        [ Tab.view model.lookup mainTab
+        [ Tab.view mainTab
             |> Html.map TabMsg
         ]
 
@@ -377,15 +379,27 @@ update session msg model =
             let
                 updatedLookup =
                     Lookup.addPage sourceTable recordList model.lookup
+
+                updatedModel =
+                    { model
+                        | lookup = updatedLookup
+                        , dropdownPageRequestInFlight = False
+                    }
             in
-            { model
-                | lookup = updatedLookup
-                , dropdownPageRequestInFlight = False
-            }
-                => Cmd.none
+            updateMainTab (Tab.AllRowMsg (Row.AllFieldMsg (Field.LookupChanged updatedLookup))) updatedModel
 
         LookupNextPageErrored e ->
             Debug.crash "Error loading next page lookup" e
+
+
+updateMainTab : Tab.Msg -> Model -> ( Model, Cmd Msg )
+updateMainTab tabMsg model =
+    let
+        ( updatedMainTab, subCmd ) =
+            Tab.update tabMsg model.mainTab
+    in
+    { model | mainTab = updatedMainTab }
+        => Cmd.map TabMsg subCmd
 
 
 {-|
@@ -396,11 +410,11 @@ update session msg model =
         - the lookup data for the specific table hasn't reached the last page
 
 -}
-dropdownPageRequestNeeded : Lookup -> Model -> Maybe TableName
-dropdownPageRequestNeeded lookup model =
+dropdownPageRequestNeeded : Model -> Maybe TableName
+dropdownPageRequestNeeded model =
     let
         sourceTable =
-            Tab.dropdownPageRequestNeeded lookup model.mainTab
+            Tab.dropdownPageRequestNeeded model.mainTab
     in
     if not model.dropdownPageRequestInFlight then
         sourceTable

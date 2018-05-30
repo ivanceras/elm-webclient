@@ -484,7 +484,7 @@ update session msg model =
                             Window.update session subMsg activeWindow
 
                         ( updatedWindow, windowCmd ) =
-                            case Window.dropdownPageRequestNeeded lookup activeWindow of
+                            case Window.dropdownPageRequestNeeded activeWindow of
                                 Just sourceTable ->
                                     let
                                         ( currentPage, listRecord ) =
@@ -542,7 +542,7 @@ update session msg model =
                             DetailedRecord.update session subMsg selectedRow
 
                         ( updatedDetailedRecord, detailCmd ) =
-                            case DetailedRecord.dropdownPageRequestNeeded lookup selectedRow of
+                            case DetailedRecord.dropdownPageRequestNeeded selectedRow of
                                 Just sourceTable ->
                                     let
                                         ( currentPage, listRecord ) =

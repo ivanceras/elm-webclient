@@ -25,6 +25,7 @@ type alias Model =
     , dropdownModel : DropdownDisplay.Model
     , dropdownInfo : DropdownInfo
     , linkRowId : Int
+    , lookup : Lookup
     }
 
 
@@ -40,8 +41,8 @@ getLinkRow model =
     linkRow
 
 
-init : Int -> Tab -> Model
-init linkRowId tab =
+init : Int -> Tab -> Lookup -> Model
+init linkRowId tab lookup =
     let
         widgetWidth =
             200
@@ -67,11 +68,12 @@ init linkRowId tab =
     , dropdownModel = dropdownModel
     , dropdownInfo = dropdownInfo
     , linkRowId = linkRowId
+    , lookup = lookup
     }
 
 
-view : Lookup -> Model -> Html Msg
-view lookup model =
+view : Model -> Html Msg
+view model =
     let
         tab =
             model.tab
@@ -83,7 +85,7 @@ view lookup model =
             tab.tableName
 
         ( page, listRecord ) =
-            Lookup.tableLookup tableName lookup
+            Lookup.tableLookup tableName model.lookup
 
         dropdownInfo =
             model.dropdownInfo
@@ -121,8 +123,8 @@ type Msg
     = DropdownDisplayMsg DropdownDisplay.Msg
 
 
-dropdownPageRequestNeeded : Lookup -> Model -> Maybe TableName
-dropdownPageRequestNeeded lookup model =
+dropdownPageRequestNeeded : Model -> Maybe TableName
+dropdownPageRequestNeeded model =
     let
         dropdownModel =
             model.dropdownModel
@@ -131,7 +133,7 @@ dropdownPageRequestNeeded lookup model =
             model.tab.tableName
 
         ( page, listRecord ) =
-            Lookup.tableLookup tableName lookup
+            Lookup.tableLookup tableName model.lookup
 
         dropdownInfo =
             model.dropdownInfo
@@ -141,7 +143,7 @@ dropdownPageRequestNeeded lookup model =
     in
     if
         DropdownDisplay.pageRequestNeeded listValue dropdownModel
-            && not (Lookup.hasReachedLastPage tableName lookup)
+            && not (Lookup.hasReachedLastPage tableName model.lookup)
     then
         Just tableName
     else

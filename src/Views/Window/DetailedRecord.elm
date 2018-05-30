@@ -15,7 +15,7 @@ import Data.Query as Query
 import Data.Query.Sort as Sort exposing (Sort)
 import Data.Session as Session exposing (Session)
 import Data.Window as Window exposing (Window)
-import Data.Window.Field as Field exposing (Field)
+import Data.Window.Field as Field exposing (Field, FieldContainer(..))
 import Data.Window.Lookup as Lookup exposing (Lookup)
 import Data.Window.Presentation as Presentation exposing (Presentation(..))
 import Data.Window.Record as Record exposing (Record, Rows)
@@ -43,6 +43,7 @@ import Util exposing ((=>), Scroll, onClickPreventDefault, onScroll, px, styleIf
 import Views.Page as Page
 import Views.Window as Window
 import Views.Window.Field as Field
+import Views.Window.Row as Row
 import Views.Window.Tab as Tab
 import Views.Window.Toolbar as Toolbar
 import Window as BrowserWindow
@@ -81,11 +82,6 @@ type alias DragPosition =
     { start : Position
     , current : Position
     }
-
-
-type FieldContainer
-    = Detail
-    | OneOne
 
 
 init : Bool -> Settings -> TableName -> Action -> ArenaArg -> Window -> Task PageLoadError Model
@@ -158,7 +154,7 @@ init isMaximized settings tableName action arenaArg window =
                             in
                             case rows of
                                 Just rows ->
-                                    Tab.init arenaArg settings Nothing tabSize sectionQuery hasManyTab InHasMany rows
+                                    Tab.init arenaArg settings Nothing tabSize sectionQuery hasManyTab InHasMany rows lookup
 
                                 Nothing ->
                                     Debug.crash "Empty row"
@@ -200,7 +196,7 @@ init isMaximized settings tableName action arenaArg window =
                             in
                             case rows of
                                 Just rows ->
-                                    ( linker, Tab.init arenaArg settings Nothing tabSize sectionQuery indirectTab InIndirect rows )
+                                    ( linker, Tab.init arenaArg settings Nothing tabSize sectionQuery indirectTab InIndirect rows lookup )
 
                                 Nothing ->
                                     Debug.crash "Empty row"
@@ -236,20 +232,20 @@ init isMaximized settings tableName action arenaArg window =
             , values =
                 case action of
                     NewRecord presentation ->
-                        createFields allotedTabWidth (NewRecord presentation) window.mainTab Nothing
+                        createFields allotedTabWidth (NewRecord presentation) window.mainTab lookup Nothing
 
                     Select _ ->
-                        createFields allotedTabWidth action window.mainTab (Maybe.map .record detail)
+                        createFields allotedTabWidth action window.mainTab lookup (Maybe.map .record detail)
 
                     Copy _ ->
-                        createFields allotedTabWidth action window.mainTab (Maybe.map .record detail)
+                        createFields allotedTabWidth action window.mainTab lookup (Maybe.map .record detail)
 
                     ListPage ->
                         []
             , oneOneValues =
                 case detail of
                     Just detail ->
-                        createOneOneFields allotedTabWidth action window.oneOneTabs detail.oneOnes
+                        createOneOneFields allotedTabWidth action window.oneOneTabs lookup detail.oneOnes
 
                     Nothing ->
                         []
@@ -532,8 +528,8 @@ handleLoadError e =
     pageLoadError Page.WindowArena ("WindowArena DetailedRecord is currently unavailable. Error: " ++ toString e)
 
 
-createOneOneFields : Int -> Action -> List Tab -> List ( TableName, Maybe Record ) -> List ( Tab, List Field.Model )
-createOneOneFields allotedTabWidth action oneOneTabs oneOneRecords =
+createOneOneFields : Int -> Action -> List Tab -> Lookup -> List ( TableName, Maybe Record ) -> List ( Tab, List Field.Model )
+createOneOneFields allotedTabWidth action oneOneTabs lookup oneOneRecords =
     List.map
         (\( tableName, record ) ->
             let
@@ -547,7 +543,7 @@ createOneOneFields allotedTabWidth action oneOneTabs oneOneRecords =
             in
             case oneTab of
                 Just oneTab ->
-                    ( oneTab, createFields allotedTabWidth action oneTab record )
+                    ( oneTab, createFields allotedTabWidth action oneTab lookup record )
 
                 Nothing ->
                     Debug.crash "There should be a oneTab"
@@ -555,27 +551,27 @@ createOneOneFields allotedTabWidth action oneOneTabs oneOneRecords =
         oneOneRecords
 
 
-dropdownPageRequestNeeded : Lookup -> Model -> Maybe TableName
-dropdownPageRequestNeeded lookup model =
+dropdownPageRequestNeeded : Model -> Maybe TableName
+dropdownPageRequestNeeded model =
     let
         mainFields =
             List.filterMap
                 (\value ->
-                    Field.dropdownPageRequestNeeded lookup value
+                    Field.dropdownPageRequestNeeded value
                 )
                 model.values
 
         hasManyTabFields =
             List.filterMap
                 (\hasManyTab ->
-                    Tab.dropdownPageRequestNeeded lookup hasManyTab
+                    Tab.dropdownPageRequestNeeded hasManyTab
                 )
                 model.hasManyTabs
 
         indirectTabFields =
             List.filterMap
                 (\( linker, indirectTab ) ->
-                    Tab.dropdownPageRequestNeeded lookup indirectTab
+                    Tab.dropdownPageRequestNeeded indirectTab
                 )
                 model.indirectTabs
 
@@ -591,11 +587,11 @@ dropdownPageRequestNeeded lookup model =
         Nothing
 
 
-createFields : Int -> Action -> Tab -> Maybe Record -> List Field.Model
-createFields allotedTabWidth action tab record =
+createFields : Int -> Action -> Tab -> Lookup -> Maybe Record -> List Field.Model
+createFields allotedTabWidth action tab lookup record =
     List.map
         (\field ->
-            Field.init allotedTabWidth InCard action record tab field
+            Field.init allotedTabWidth InCard action record tab lookup field
         )
         tab.fields
 
@@ -885,7 +881,7 @@ viewFieldInCard container labelWidth lookup value =
                 [ text (field.name ++ ": ") ]
             ]
         , div [ class "card-field-value" ]
-            [ Field.view lookup value
+            [ Field.view value
                 |> Html.map (FieldMsg container value)
             ]
         ]
@@ -1076,7 +1072,7 @@ listView isTabActive lookup section tab =
                     style [ ( "display", "none" ) ]
 
         detailRecordView =
-            Tab.view lookup tab
+            Tab.view tab
                 |> Html.map (\tabMsg -> TabMsg ( section, tab, tabMsg ))
     in
     div
@@ -1211,28 +1207,7 @@ update session msg model =
             updatedModel => cmd
 
         TabMsgAll tabMsg ->
-            let
-                ( updatedHasManyTabs, hasManySubCmds ) =
-                    List.map (Tab.update tabMsg) model.hasManyTabs
-                        |> List.unzip
-
-                ( updatedIndirectTabs, indirectSubCmds ) =
-                    List.map
-                        (\( linker, tab ) ->
-                            let
-                                ( updatedTab, cmd ) =
-                                    Tab.update tabMsg tab
-                            in
-                            ( ( linker, updatedTab ), cmd )
-                        )
-                        model.indirectTabs
-                        |> List.unzip
-            in
-            { model
-                | hasManyTabs = updatedHasManyTabs
-                , indirectTabs = updatedIndirectTabs
-            }
-                => Cmd.batch (List.map (Cmd.map TabMsgAll) (hasManySubCmds ++ indirectSubCmds))
+            updateAllTabs tabMsg model
 
         TabMsg ( section, tabModel, Tab.ToolbarMsg Toolbar.ClickedNewButton ) ->
             let
@@ -1352,12 +1327,14 @@ update session msg model =
             let
                 updatedLookup =
                     Lookup.addPage sourceTable recordList model.lookup
+
+                updatedModel =
+                    { model
+                        | lookup = updatedLookup
+                        , dropdownPageRequestInFlight = False
+                    }
             in
-            { model
-                | lookup = updatedLookup
-                , dropdownPageRequestInFlight = False
-            }
-                => Cmd.none
+            updateAllFields (Field.LookupChanged updatedLookup) updatedModel
 
         LookupNextPageErrored e ->
             Debug.crash "Error loading next page lookup" e
@@ -1492,12 +1469,14 @@ updateAllFields fieldMsg model =
                 )
                 model.oneOneValues
                 |> List.unzip
+
+        updatedModel =
+            { model
+                | values = updatedValues
+                , oneOneValues = updatedOneOneValues
+            }
     in
-    { model
-        | values = updatedValues
-        , oneOneValues = updatedOneOneValues
-    }
-        => Cmd.none
+    updateAllTabs (Tab.AllRowMsg (Row.AllFieldMsg fieldMsg)) updatedModel
 
 
 updateFields : Field.Msg -> Field.Model -> List Field.Model -> List ( Field.Model, Cmd Msg )
@@ -1624,6 +1603,88 @@ updateSizes session model =
             ( allotedWidth, detailTabHeight )
     in
     update session (TabMsgAll (Tab.SetSize tabSize)) model
+
+
+updateValues : Field.Msg -> Model -> ( Model, Cmd Msg )
+updateValues fieldMsg model =
+    let
+        ( updatedValues, fieldSubCmd ) =
+            List.map (Field.update fieldMsg) model.values
+                |> List.unzip
+    in
+    { model | values = updatedValues }
+        => Cmd.batch
+            (List.map2
+                (\value subCmd ->
+                    Cmd.map (FieldMsg Detail value) subCmd
+                )
+                updatedValues
+                fieldSubCmd
+            )
+
+
+updateAllTabs : Tab.Msg -> Model -> ( Model, Cmd Msg )
+updateAllTabs tabMsg model =
+    let
+        ( updatedModel, cmd ) =
+            updateHasManyTabs tabMsg model
+
+        ( updatedModel2, cmd2 ) =
+            updateIndirectTabs tabMsg updatedModel
+    in
+    updatedModel2 => Cmd.batch [ cmd, cmd2 ]
+
+
+updateHasManyTabs : Tab.Msg -> Model -> ( Model, Cmd Msg )
+updateHasManyTabs tabMsg model =
+    let
+        ( updatedTabs, tabSubCmd ) =
+            List.map (Tab.update tabMsg) model.hasManyTabs
+                |> List.unzip
+    in
+    { model | hasManyTabs = updatedTabs }
+        => Cmd.batch
+            (List.map2
+                (\tab subCmd ->
+                    Cmd.map
+                        (\subMsg ->
+                            TabMsg ( HasMany, tab, subMsg )
+                        )
+                        subCmd
+                )
+                updatedTabs
+                tabSubCmd
+            )
+
+
+updateIndirectTabs : Tab.Msg -> Model -> ( Model, Cmd Msg )
+updateIndirectTabs tabMsg model =
+    let
+        ( updatedTabs, tabSubCmd ) =
+            List.map
+                (\( linker, tab ) ->
+                    let
+                        ( updatedTab, subCmd ) =
+                            Tab.update tabMsg tab
+                    in
+                    ( ( linker, updatedTab ), subCmd )
+                )
+                model.indirectTabs
+                |> List.unzip
+    in
+    { model | indirectTabs = updatedTabs }
+        => Cmd.batch
+            (List.map2
+                (\( linker, tab ) subCmd ->
+                    Cmd.map
+                        (\subMsg ->
+                            TabMsg ( Indirect, tab, subMsg )
+                        )
+                        subCmd
+                )
+                updatedTabs
+                tabSubCmd
+            )
 
 
 updateTabModels : Tab.Msg -> List Tab.Model -> Tab.Model -> List ( Tab.Model, Cmd Tab.Msg )

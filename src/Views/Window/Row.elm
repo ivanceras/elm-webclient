@@ -42,6 +42,7 @@ type alias Model =
     , tab : Tab
     , fields : List Field.Model
     , containerScroll : Scroll
+    , lookup : Lookup
     }
 
 
@@ -78,26 +79,27 @@ isModified model =
     List.any Field.isModified model.fields
 
 
-init : Action -> RecordId -> Record -> Tab -> Model
-init action recordId record tab =
+init : Action -> RecordId -> Record -> Tab -> Lookup -> Model
+init action recordId record tab lookup =
     { selected = False
     , recordId = recordId
     , record = record
     , tab = tab
-    , fields = createFields action record tab
+    , fields = createFields action record tab lookup
     , containerScroll = Scroll 0 0
+    , lookup = lookup
     }
 
 
-createFields : Action -> Record -> Tab -> List Field.Model
-createFields action record tab =
+createFields : Action -> Record -> Tab -> Lookup -> List Field.Model
+createFields action record tab lookup =
     List.map
-        (Field.init 0 InList action (Just record) tab)
+        (Field.init 0 InList action (Just record) tab lookup)
         tab.fields
 
 
-view : Lookup -> Model -> Html Msg
-view lookup model =
+view : Model -> Html Msg
+view model =
     let
         recordId =
             model.recordId
@@ -135,7 +137,7 @@ view lookup model =
                         , Constant.tabRowValueStyle
                         , style [ ( "width", px rowWidth ) ]
                         ]
-                        [ Field.view lookup value
+                        [ Field.view value
                             |> Html.map (FieldMsg value)
                         ]
                 )
@@ -267,11 +269,11 @@ viewRecordDetail recordId tab =
         ]
 
 
-dropdownPageRequestNeeded : Lookup -> Model -> Maybe TableName
-dropdownPageRequestNeeded lookup model =
+dropdownPageRequestNeeded : Model -> Maybe TableName
+dropdownPageRequestNeeded model =
     List.filterMap
         (\value ->
-            Field.dropdownPageRequestNeeded lookup value
+            Field.dropdownPageRequestNeeded value
         )
         model.fields
         |> List.head
@@ -279,6 +281,7 @@ dropdownPageRequestNeeded lookup model =
 
 type Msg
     = FieldMsg Field.Model Field.Msg
+    | AllFieldMsg Field.Msg
     | ResetChanges
     | ToggleSelect Bool
     | ClickedDetailedLink
@@ -289,6 +292,9 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        AllFieldMsg fieldMsg ->
+            updateAllFields fieldMsg model
+
         FieldMsg argValue msg ->
             let
                 updated =

@@ -1,6 +1,7 @@
 module Data.Window.Field
     exposing
         ( Field
+        , FieldContainer(..)
         , FieldWidth(..)
         , cast
         , columnName
@@ -39,6 +40,11 @@ type alias Field =
     , columnDetail : ColumnDetail
     , controlWidget : ControlWidget
     }
+
+
+type FieldContainer
+    = Detail
+    | OneOne
 
 
 dropdown : Field -> Maybe Dropdown

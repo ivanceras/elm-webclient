@@ -71,6 +71,7 @@ type alias Model =
     , settings : Settings
     , arenaArg : ArenaArg
     , errors : List String
+    , lookup : Lookup
     }
 
 
@@ -255,13 +256,13 @@ getLinkExistingRows model =
     rows
 
 
-init : ArenaArg -> Settings -> Maybe RecordId -> ( Float, Float ) -> Query -> Tab -> TabType -> Rows -> Model
-init arenaArg settings selectedRecordId size query tab tabType rows =
+init : ArenaArg -> Settings -> Maybe RecordId -> ( Float, Float ) -> Query -> Tab -> TabType -> Rows -> Lookup -> Model
+init arenaArg settings selectedRecordId size query tab tabType rows lookup =
     { tab = tab
     , tabType = tabType
     , scroll = Scroll 0 0
     , size = size
-    , pageRows = [ createRowsModel selectedRecordId tab rows ]
+    , pageRows = [ createRowsModel selectedRecordId tab rows lookup ]
     , linkRows = []
     , newRows = []
     , pageRequestInFlight = False
@@ -287,11 +288,12 @@ init arenaArg settings selectedRecordId size query tab tabType rows =
     , settings = settings
     , arenaArg = arenaArg
     , errors = []
+    , lookup = lookup
     }
 
 
-createRowsModel : Maybe RecordId -> Tab -> Rows -> List Row.Model
-createRowsModel selectedRecordId tab rows =
+createRowsModel : Maybe RecordId -> Tab -> Rows -> Lookup -> List Row.Model
+createRowsModel selectedRecordId tab rows lookup =
     let
         recordList =
             Record.rowsToRecordList rows
@@ -302,7 +304,7 @@ createRowsModel selectedRecordId tab rows =
                 recordId =
                     Tab.recordId record tab
             in
-            Row.init WindowArena.ListPage recordId record tab
+            Row.init WindowArena.ListPage recordId record tab lookup
         )
         recordList
 
@@ -378,15 +380,15 @@ pageRequestNeeded model =
     needed
 
 
-dropdownPageRequestNeeded : Lookup -> Model -> Maybe TableName
-dropdownPageRequestNeeded lookup model =
+dropdownPageRequestNeeded : Model -> Maybe TableName
+dropdownPageRequestNeeded model =
     let
         rowDropdown =
             List.filterMap
                 (\page ->
                     List.filterMap
                         (\row ->
-                            Row.dropdownPageRequestNeeded lookup row
+                            Row.dropdownPageRequestNeeded row
                         )
                         page
                         |> List.head
@@ -396,14 +398,14 @@ dropdownPageRequestNeeded lookup model =
         linkRowDropdown =
             List.filterMap
                 (\linkRow ->
-                    LinkRow.dropdownPageRequestNeeded lookup linkRow
+                    LinkRow.dropdownPageRequestNeeded linkRow
                 )
                 model.linkRows
 
         newRowDropdown =
             List.filterMap
                 (\newRow ->
-                    Row.dropdownPageRequestNeeded lookup newRow
+                    Row.dropdownPageRequestNeeded newRow
                 )
                 model.newRows
     in
@@ -413,8 +415,8 @@ dropdownPageRequestNeeded lookup model =
         |> List.head
 
 
-view : Lookup -> Model -> Html Msg
-view lookup model =
+view : Model -> Html Msg
+view model =
     let
         tab =
             model.tab
@@ -475,9 +477,9 @@ view lookup model =
                         , ( "width", px adjustedWidth )
                         ]
                     ]
-                    ([ viewLinkRows lookup model ]
-                        ++ [ viewNewRows lookup model ]
-                        ++ [ listViewRows lookup model ]
+                    ([ viewLinkRows model ]
+                        ++ [ viewNewRows model ]
+                        ++ [ listViewRows model ]
                     )
                 ]
             ]
@@ -780,27 +782,27 @@ viewPage lookup rowList =
     div []
         (List.map
             (\row ->
-                Row.view lookup row
+                Row.view row
                     |> Html.map (RowMsg row)
             )
             rowList
         )
 
 
-viewNewRows : Lookup -> Model -> Html Msg
-viewNewRows lookup model =
+viewNewRows : Model -> Html Msg
+viewNewRows model =
     div []
         (List.map
             (\newRow ->
-                Row.view lookup newRow
+                Row.view newRow
                     |> Html.map (NewRowMsg newRow)
             )
             model.newRows
         )
 
 
-viewLinkRows : Lookup -> Model -> Html Msg
-viewLinkRows lookup model =
+viewLinkRows : Model -> Html Msg
+viewLinkRows model =
     let
         tab =
             model.tab
@@ -808,15 +810,15 @@ viewLinkRows lookup model =
     div []
         (List.map
             (\linkRow ->
-                LinkRow.view lookup linkRow
+                LinkRow.view linkRow
                     |> Html.map (LinkRowMsg linkRow)
             )
             model.linkRows
         )
 
 
-listViewRows : Lookup -> Model -> Html Msg
-listViewRows lookup model =
+listViewRows : Model -> Html Msg
+listViewRows model =
     let
         tab =
             model.tab
@@ -825,7 +827,7 @@ listViewRows lookup model =
         (if List.length model.pageRows > 0 then
             List.map
                 (\pageRow ->
-                    viewPage lookup pageRow
+                    viewPage model.lookup pageRow
                 )
                 model.pageRows
          else
@@ -845,6 +847,7 @@ type Msg
     | SaveChangesErrored String
     | RefreshPageError String
     | RowMsg Row.Model Row.Msg
+    | AllRowMsg Row.Msg
     | NewRowMsg Row.Model Row.Msg
     | LinkRowMsg LinkRow.Model LinkRow.Msg
     | SearchboxMsg Searchbox.Model Searchbox.Msg
@@ -856,6 +859,9 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        AllRowMsg rowMsg ->
+            updateAllRows rowMsg model
+
         SetSize size ->
             { model | size = size } => Cmd.none
 
@@ -869,7 +875,7 @@ update msg model =
         NextPageReceived rows ->
             if List.length rows.data > 0 then
                 { model
-                    | pageRows = model.pageRows ++ [ createRowsModel model.selectedRecordId model.tab rows ]
+                    | pageRows = model.pageRows ++ [ createRowsModel model.selectedRecordId model.tab rows model.lookup ]
                     , pageRequestInFlight = False
                     , currentPage = model.currentPage + 1
                 }
@@ -890,7 +896,7 @@ update msg model =
 
         RefreshPageReceived rows ->
             { model
-                | pageRows = [ createRowsModel model.selectedRecordId model.tab rows ]
+                | pageRows = [ createRowsModel model.selectedRecordId model.tab rows model.lookup ]
                 , pageRequestInFlight = False
 
                 -- any change to search/filter will have to reset the current page
@@ -1082,7 +1088,7 @@ update msg model =
                     List.length model.linkRows
 
                 linkRow =
-                    LinkRow.init linkRowId model.tab
+                    LinkRow.init linkRowId model.tab model.lookup
             in
             { model | linkRows = model.linkRows ++ [ linkRow ] }
                 => Cmd.none
@@ -1211,7 +1217,7 @@ insertNewRow model =
             Record.empty
 
         newRow =
-            Row.init (WindowArena.NewRecord Presentation.InList) newRecordId emptyRecord model.tab
+            Row.init (WindowArena.NewRecord Presentation.InList) newRecordId emptyRecord model.tab model.lookup
     in
     { model | newRows = model.newRows ++ [ newRow ] }
         => Cmd.none
