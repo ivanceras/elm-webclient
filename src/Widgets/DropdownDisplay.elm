@@ -360,5 +360,8 @@ update msg model =
                 => Cmd.none
 
         ContainerScrollChanged scroll ->
-            { model | containerScroll = scroll }
+            { model
+                | containerScroll = scroll
+                , opened = False --close the dropdown when scrolled
+            }
                 => Cmd.none
