@@ -1073,7 +1073,7 @@ listView isTabActive lookup section tab =
                     style [ ( "display", "none" ) ]
 
         detailRecordView =
-            Tab.listView lookup tab
+            Tab.view lookup tab
                 |> Html.map (\tabMsg -> TabMsg ( section, tab, tabMsg ))
     in
     div

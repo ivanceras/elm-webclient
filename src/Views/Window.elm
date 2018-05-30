@@ -220,7 +220,7 @@ viewMainTab model =
             model.mainTab
     in
     div [ class "main-tab" ]
-        [ Tab.listView model.lookup mainTab
+        [ Tab.view model.lookup mainTab
             |> Html.map TabMsg
         ]
 

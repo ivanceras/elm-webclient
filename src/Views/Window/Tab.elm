@@ -9,12 +9,12 @@ module Views.Window.Tab
         , getUnlinkedRows
         , init
         , isModified
-        , listView
         , pageRequestNeeded
         , selectedRowCount
         , selectedRows
         , subscriptions
         , update
+        , view
         )
 
 import Constant
@@ -413,8 +413,8 @@ dropdownPageRequestNeeded lookup model =
         |> List.head
 
 
-listView : Lookup -> Model -> Html Msg
-listView lookup model =
+view : Lookup -> Model -> Html Msg
+view lookup model =
     let
         tab =
             model.tab

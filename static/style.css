@@ -437,6 +437,8 @@ a.primary-link {
 }
 
 .window-filter{
+    position: sticky;
+    top: 0px;
     display: flex;
     padding: 0 5px;
 }

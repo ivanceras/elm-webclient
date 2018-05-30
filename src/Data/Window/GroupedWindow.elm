@@ -44,7 +44,7 @@ matchWindowNames searchText windowNames =
 matchWindowName : String -> WindowName -> Bool
 matchWindowName searchText windowName =
     String.startsWith searchText windowName.name
-        || String.startsWith searchText windowName.tableName.name
+        || String.contains searchText windowName.tableName.name
 
 
 
