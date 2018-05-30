@@ -3,14 +3,16 @@ module Views.Page exposing (ActivePage(..), bodyId, frame)
 {-| The frame around a typical page - that is, the header and footer.
 -}
 
+import Constant
 import Data.User as User exposing (User, Username)
 import Data.UserPhoto as UserPhoto exposing (UserPhoto)
 import Data.WindowArena as WindowArena
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Lazy exposing (lazy2)
+import Ionicon
 import Route exposing (Route)
-import Util exposing ((=>))
+import Util exposing ((=>), viewIf)
 
 
 {-| Determines which navbar link (if any) will be rendered as active.
@@ -42,9 +44,26 @@ frame : Bool -> Maybe User -> ActivePage -> Html msg -> Html msg
 frame isLoading user page content =
     div [ class "page-frame" ]
         [ viewHeader page user isLoading
+        , viewLoadingIndicator
+            |> viewIf isLoading
         , content
         , viewFooter
         ]
+
+
+viewLoadingIndicator : Html msg
+viewLoadingIndicator =
+    let
+        iconColor =
+            Constant.iconColor
+
+        iconSize =
+            30
+    in
+    div
+        [ class "selected-record-loading-indicator spin animated fadeIn"
+        ]
+        [ Ionicon.loadA iconSize iconColor ]
 
 
 viewHeader : ActivePage -> Maybe User -> Bool -> Html msg
