@@ -1042,12 +1042,6 @@ update msg model =
                 json =
                     Encode.encode 4 (DataContainer.containerEncoder forSave)
 
-                _ =
-                    Debug.log "for save:" forSave
-
-                _ =
-                    Debug.log ("For Save:" ++ json) ""
-
                 settings =
                     model.settings
 
@@ -1074,12 +1068,7 @@ update msg model =
                 => Cmd.none
 
         ToolbarMsg Toolbar.ClickedCancelOnMain ->
-            let
-                ( updatedPageRows, subCmd ) =
-                    resetPageRows model
-            in
-            { model | pageRows = updatedPageRows }
-                => Cmd.batch subCmd
+            updateAllRows Row.ResetChanges model
 
         ToolbarMsg Toolbar.ClickedInsertNewButton ->
             insertNewRow model
@@ -1133,18 +1122,6 @@ update msg model =
             in
             model => Cmd.none
 
-        {-
-           SetFocusedRecord recordId ->
-               let
-                   newModel =
-                       { model | selectedRecordId = Just recordId }
-
-                   ( pageRows, cmds ) =
-                       updateAllRowsSetFocusedRecord recordId newModel.pageRows
-               in
-               { newModel | pageRows = pageRows }
-                   => Cmd.batch cmds
-        -}
         ToggleSort columnName ->
             let
                 _ =
@@ -1238,29 +1215,6 @@ insertNewRow model =
     in
     { model | newRows = model.newRows ++ [ newRow ] }
         => Cmd.none
-
-
-resetPageRows : Model -> ( List (List Row.Model), List (Cmd Msg) )
-resetPageRows model =
-    let
-        ( updatedPageRow, subCmd ) =
-            List.map
-                (\page ->
-                    List.map
-                        (\row ->
-                            let
-                                ( updatedRow, rowCmd ) =
-                                    Row.update Row.ResetChanges row
-                            in
-                            ( updatedRow, Cmd.map (RowMsg updatedRow) rowCmd )
-                        )
-                        page
-                        |> List.unzip
-                )
-                model.pageRows
-                |> List.unzip
-    in
-    ( updatedPageRow, List.concat subCmd )
 
 
 updateAllRows : Row.Msg -> Model -> ( Model, Cmd Msg )
