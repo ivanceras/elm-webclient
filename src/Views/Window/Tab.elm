@@ -860,7 +860,11 @@ update msg model =
             { model | size = size } => Cmd.none
 
         ListRowScrolled scroll ->
-            { model | scroll = scroll } => Cmd.none
+            let
+                updatedModel =
+                    { model | scroll = scroll }
+            in
+            updateAllRows (Row.ContainerScrollChanged scroll) updatedModel
 
         NextPageReceived rows ->
             if List.length rows.data > 0 then
@@ -1028,12 +1032,7 @@ update msg model =
                 => Cmd.none
 
         ToggleSelectAllRows v ->
-            let
-                ( pageRows, cmds ) =
-                    toggleSelectAllRows v model.pageRows
-            in
-            { model | pageRows = pageRows }
-                => Cmd.batch cmds
+            updateAllRows (Row.ToggleSelect v) model
 
         ToolbarMsg Toolbar.ClickedSaveButton ->
             let
@@ -1264,56 +1263,28 @@ resetPageRows model =
     ( updatedPageRow, List.concat subCmd )
 
 
-toggleSelectAllRows : Bool -> List (List Row.Model) -> ( List (List Row.Model), List (Cmd Msg) )
-toggleSelectAllRows value pageList =
+updateAllRows : Row.Msg -> Model -> ( Model, Cmd Msg )
+updateAllRows rowMsg model =
     let
-        ( updatedRowModel, rowCmds ) =
+        ( updatedPageRow, rowCmds ) =
             List.map
                 (\page ->
                     List.map
                         (\row ->
                             let
                                 ( updatedRow, rowCmd ) =
-                                    Row.update (Row.ToggleSelect value) row
+                                    Row.update rowMsg row
                             in
                             ( updatedRow, rowCmd |> Cmd.map (RowMsg updatedRow) )
                         )
                         page
                         |> List.unzip
                 )
-                pageList
+                model.pageRows
                 |> List.unzip
     in
-    ( updatedRowModel, List.concat rowCmds )
-
-
-
-{-
-   updateAllRowsSetFocusedRecord : RecordId -> List (List Row.Model) -> ( List (List Row.Model), List (Cmd Msg) )
-   updateAllRowsSetFocusedRecord recordId pageList =
-       let
-           ( updatedRowModel, rowCmds ) =
-               List.map
-                   (\page ->
-                       List.map
-                           (\row ->
-                               let
-                                   isFocused =
-                                       row.recordId == recordId
-
-                                   ( updatedRow, rowCmd ) =
-                                       Row.update (Row.SetFocused isFocused) row
-                               in
-                               ( updatedRow, rowCmd |> Cmd.map (RowMsg updatedRow) )
-                           )
-                           page
-                           |> List.unzip
-                   )
-                   pageList
-                   |> List.unzip
-       in
-       ( updatedRowModel, List.concat rowCmds )
--}
+    { model | pageRows = updatedPageRow }
+        => Cmd.batch (List.concat rowCmds)
 
 
 subscriptions : Model -> Sub Msg

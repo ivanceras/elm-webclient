@@ -31,7 +31,7 @@ import Material.Icons.Content as MaterialContent
 import Material.Icons.Editor as MaterialEditor
 import Material.Icons.Maps as MaterialMaps
 import Route exposing (Route)
-import Util exposing ((=>), pair, px, viewIf)
+import Util exposing ((=>), Scroll, pair, px, viewIf)
 import Views.Window.Field as Field
 
 
@@ -41,6 +41,7 @@ type alias Model =
     , record : Record
     , tab : Tab
     , fields : List Field.Model
+    , containerScroll : Scroll
     }
 
 
@@ -84,6 +85,7 @@ init action recordId record tab =
     , record = record
     , tab = tab
     , fields = createFields action record tab
+    , containerScroll = Scroll 0 0
     }
 
 
@@ -281,6 +283,7 @@ type Msg
     | ToggleSelect Bool
     | ClickedDetailedLink
     | ClickedCopyRecord
+    | ContainerScrollChanged Scroll
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -336,7 +339,25 @@ update msg model =
         ClickedCopyRecord ->
             model => Cmd.none
 
+        ContainerScrollChanged scroll ->
+            let
+                updatedModel =
+                    { model | containerScroll = scroll }
+            in
+            updateAllFields (Field.ContainerScrollChanged scroll) updatedModel
+
 
 updateFields : Field.Msg -> Model -> List ( Field.Model, Cmd Field.Msg )
 updateFields msg model =
     List.map (Field.update msg) model.fields
+
+
+updateAllFields : Field.Msg -> Model -> ( Model, Cmd Msg )
+updateAllFields fieldMsg model =
+    let
+        ( updatedFields, subCmd ) =
+            List.map (Field.update fieldMsg) model.fields
+                |> List.unzip
+    in
+    { model | fields = updatedFields }
+        => Cmd.none

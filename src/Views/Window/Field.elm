@@ -48,6 +48,7 @@ type alias Model =
     , dropdownInfo : Maybe DropdownInfo
     , allotedTabWidth : Int
     , isFocused : Bool
+    , containerScroll : Scroll
     }
 
 
@@ -123,6 +124,7 @@ init allotedTabWidth presentation action record tab field =
     , dropdownInfo = dropdownInfo
     , allotedTabWidth = allotedTabWidth
     , isFocused = False
+    , containerScroll = Scroll 0 0
     }
 
 
@@ -821,6 +823,7 @@ type Msg
     | PrimaryLinkClicked TableName String
     | FieldFocused
     | FieldBlurred
+    | ContainerScrollChanged Scroll
 
 
 type Widget
@@ -1059,6 +1062,28 @@ update msg model =
         FieldBlurred ->
             { model | isFocused = False }
                 => Cmd.none
+
+        ContainerScrollChanged scroll ->
+            let
+                updatedModel =
+                    { model | containerScroll = scroll }
+            in
+            updateDropdownDisplay (DropdownDisplay.ContainerScrollChanged scroll) updatedModel
+
+
+updateDropdownDisplay : DropdownDisplay.Msg -> Model -> ( Model, Cmd Msg )
+updateDropdownDisplay dropdownMsg model =
+    case model.widget of
+        TableDropdown dropdown ->
+            let
+                ( updatedDropdown, subCmd ) =
+                    DropdownDisplay.update dropdownMsg dropdown
+            in
+            { model | widget = TableDropdown updatedDropdown }
+                => Cmd.map (DropdownDisplayMsg updatedDropdown) subCmd
+
+        _ ->
+            model => Cmd.none
 
 
 updateWidgetValue : Model -> Maybe Value -> Widget

@@ -10,6 +10,7 @@
     "dependencies": {
         "NoRedInk/elm-decode-pipeline": "3.0.0 <= v < 4.0.0",
         "abadi199/dateparser": "1.0.3 <= v < 2.0.0",
+        "coreytrampe/elm-vendor": "2.0.3 <= v < 3.0.0",
         "elm-community/elm-datepicker": "7.2.2 <= v < 8.0.0",
         "elm-community/elm-material-icons": "2.0.1 <= v < 3.0.0",
         "elm-community/json-extra": "2.1.0 <= v < 3.0.0",

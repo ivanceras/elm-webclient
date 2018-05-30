@@ -19,6 +19,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Ionicon
 import Util exposing ((=>), Scroll, onScroll, px, viewIf)
+import Vendor
 
 
 type alias Model =
@@ -27,6 +28,7 @@ type alias Model =
     , scroll : Scroll
     , alignment : Alignment
     , width : Int
+    , containerScroll : Scroll
     }
 
 
@@ -47,6 +49,7 @@ init alignment width selected =
     , scroll = Scroll 0 0
     , alignment = alignment
     , width = width
+    , containerScroll = Scroll 0 0
     }
 
 
@@ -242,11 +245,32 @@ viewDropdown styles list model =
 
         choiceWidth =
             calcChoiceWidth sorted
+
+        padTop =
+            2
+
+        ( marginTop, marginLeft ) =
+            case Vendor.prefix of
+                Vendor.Webkit ->
+                    ( -model.containerScroll.top + padTop
+                    , -model.containerScroll.left
+                    )
+
+                _ ->
+                    ( padTop, 0 )
     in
     div
         [ class "dropdown-select"
         , onScroll DropdownScrolled
         , styles
+
+        -- a clever hack for webkit engine, since absolute position in webkit doesn't scroll together
+        -- with the container, put the container scroll as margin
+        -- using margin since there is no easy way in elm to get the element top.
+        , style
+            [ ( "margin-top", px marginTop )
+            , ( "margin-left", px marginLeft )
+            ]
         ]
         [ div [ class "dropdown-options" ]
             (List.map (viewOption ( pkWidth, choiceWidth )) sorted)
@@ -310,6 +334,7 @@ type Msg
     | CloseDropdown
     | SelectionChanged Value
     | DropdownScrolled Scroll
+    | ContainerScrollChanged Scroll
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -332,4 +357,8 @@ update msg model =
 
         DropdownScrolled scroll ->
             { model | scroll = scroll }
+                => Cmd.none
+
+        ContainerScrollChanged scroll ->
+            { model | containerScroll = scroll }
                 => Cmd.none

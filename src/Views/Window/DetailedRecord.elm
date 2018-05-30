@@ -39,7 +39,7 @@ import Request.Window.Records as Records
 import Route
 import Settings exposing (Settings)
 import Task exposing (Task)
-import Util exposing ((=>), onClickPreventDefault, px, styleIf, viewIf)
+import Util exposing ((=>), Scroll, onClickPreventDefault, onScroll, px, styleIf, viewIf)
 import Views.Page as Page
 import Views.Window as Window
 import Views.Window.Field as Field
@@ -64,6 +64,7 @@ type alias Model =
     , indirectTabs : List ( TableName, Tab.Model )
     , position : Position
     , drag : Maybe DragPosition
+    , scroll : Scroll
     , browserSize : BrowserWindow.Size
     , arenaArg : ArenaArg
     , lookup : Lookup
@@ -228,6 +229,7 @@ init isMaximized settings tableName action arenaArg window =
             , indirectTabs = indirectTabs
             , position = initialPosition splitPercentage isMaximized browserSize
             , drag = Nothing
+            , scroll = Scroll 0 0
             , browserSize = browserSize
             , arenaArg = arenaArg
             , lookup = lookup
@@ -753,6 +755,7 @@ view model =
         , div
             [ class "main-tab-selected"
             , style [ ( "height", px mainRecordHeight ) ]
+            , onScroll ViewScrolled
             ]
             [ cardViewRecord Detail model.values mainTab model
             , viewOneOneTabs model
@@ -1122,6 +1125,7 @@ type Drag
 
 type Msg
     = Drag Drag
+    | ViewScrolled Scroll
     | WindowResized BrowserWindow.Size
     | TabMsg ( Section, Tab.Model, Tab.Msg )
     | TabMsgAll Tab.Msg
@@ -1446,6 +1450,13 @@ update session msg model =
             { model | errors = model.errors ++ [ e ] }
                 => Cmd.none
 
+        ViewScrolled scroll ->
+            let
+                updatedModel =
+                    { model | scroll = scroll }
+            in
+            updateAllFields (Field.ContainerScrollChanged scroll) updatedModel
+
 
 requestUpdateRecords : Settings -> TableName -> RecordDetailChangeset -> Cmd Msg
 requestUpdateRecords settings tableName changeset =
@@ -1460,6 +1471,33 @@ requestUpdateRecords settings tableName changeset =
                     Err e ->
                         RecordChangesetUpdateError (toString e)
             )
+
+
+updateAllFields : Field.Msg -> Model -> ( Model, Cmd Msg )
+updateAllFields fieldMsg model =
+    let
+        ( updatedValues, fieldSubCmd ) =
+            List.map (Field.update fieldMsg) model.values
+                |> List.unzip
+
+        ( updatedOneOneValues, oneOnefieldSubCmd ) =
+            List.map
+                (\( tab, fields ) ->
+                    let
+                        ( updatedFields, subCmd ) =
+                            List.map (Field.update fieldMsg) fields
+                                |> List.unzip
+                    in
+                    ( ( tab, updatedFields ), subCmd )
+                )
+                model.oneOneValues
+                |> List.unzip
+    in
+    { model
+        | values = updatedValues
+        , oneOneValues = updatedOneOneValues
+    }
+        => Cmd.none
 
 
 updateFields : Field.Msg -> Field.Model -> List Field.Model -> List ( Field.Model, Cmd Msg )
