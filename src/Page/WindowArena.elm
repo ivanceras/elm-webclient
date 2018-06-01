@@ -1,4 +1,4 @@
-module Page.WindowArena
+port module Page.WindowArena
     exposing
         ( Model
         , Msg
@@ -12,6 +12,7 @@ module Page.WindowArena
 -}
 
 import Constant
+import Data.DatabaseName as DatabaseName exposing (DatabaseName)
 import Data.Session as Session exposing (Session)
 import Data.Window as Window exposing (Tag)
 import Data.Window.Lookup as Lookup
@@ -24,11 +25,13 @@ import Html.Attributes exposing (class, classList, id, style)
 import Http
 import Ionicon
 import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
+import Request.Auth as Auth
 import Request.Window
 import Request.Window.Records
 import Route
 import SelectList exposing (SelectList)
 import Settings exposing (Settings)
+import String.Extra
 import Task exposing (Task)
 import Util exposing ((=>), styleIf, viewIf)
 import Views.Page as Page
@@ -75,6 +78,10 @@ init settings session arenaArg =
 
         tableName =
             arenaArg.tableName
+
+        getDbName =
+            Auth.dbName settings
+                |> Task.mapError handleLoadError
 
         loadWindow =
             case tableName of
@@ -138,8 +145,8 @@ init settings session arenaArg =
                 Nothing ->
                     Task.succeed Nothing
     in
-    Task.map3
-        (\activeWindow groupedWindow selectedRow ->
+    Task.map4
+        (\activeWindow groupedWindow selectedRow dbName ->
             { activeWindow = activeWindow
             , groupedWindow = groupedWindow
             , selectedRow = selectedRow
@@ -153,6 +160,7 @@ init settings session arenaArg =
         loadActiveWindow
         loadWindowList
         loadSelectedRecord
+        getDbName
 
 
 
@@ -257,13 +265,31 @@ viewTabNames model =
 
 viewBanner : Model -> Html Msg
 viewBanner model =
+    let
+        ( dbName, dbDescription ) =
+            case model.settings.dbName of
+                Just dbName ->
+                    let
+                        db =
+                            String.Extra.toTitleCase dbName.name
+                    in
+                    case dbName.description of
+                        Just desc ->
+                            ( db, desc )
+
+                        Nothing ->
+                            ( db, "Powered by Diwata - a user friendly database interface" )
+
+                Nothing ->
+                    ( "Diwata", "a user-friendly database interface" )
+    in
     div
         [ class "banner"
         , id "banner"
         ]
         [ div [ class "head" ]
-            [ h3 [ class "logo-font" ] [ text "Diwata" ]
-            , text "a user-friendly database interface"
+            [ h3 [ class "logo-font" ] [ text dbName ]
+            , text dbDescription
             ]
         , viewLoadingIndicator model
         ]

@@ -1,5 +1,6 @@
-module Main exposing (main)
+port module Main exposing (main)
 
+import Data.DatabaseName as DatabaseName exposing (DatabaseName)
 import Data.Session as Session exposing (Session)
 import Data.User as User exposing (User, Username)
 import Data.Window exposing (Slug)
@@ -13,9 +14,10 @@ import Page.Login as Login
 import Page.NotFound as NotFound
 import Page.WindowArena as WindowArena
 import Ports
-import Request.User
+import Request.Auth as Auth
 import Route exposing (Route)
 import Settings exposing (Settings)
+import String.Extra
 import Task
 import Util exposing ((=>))
 import Views.Page as Page exposing (ActivePage)
@@ -67,25 +69,47 @@ init val location =
                     settings
 
                 Nothing ->
-                    { settings | apiEndPoint = Just location.origin }
+                    { settings
+                        | apiEndPoint =
+                            case location.origin of
+                                "" ->
+                                    Nothing
+
+                                "null" ->
+                                    Nothing
+
+                                origin ->
+                                    Just origin
+                    }
 
         _ =
             Debug.log "corrected settings: " correctedSettings
 
         dbUrlCmd : Cmd (Maybe String)
         dbUrlCmd =
-            Task.attempt
-                (\r ->
-                    case r of
-                        Ok r ->
-                            Just r
+            Auth.dbUrl correctedSettings
+                |> Task.attempt
+                    (\r ->
+                        case r of
+                            Ok r ->
+                                Just r
 
-                        Err e ->
-                            Nothing
-                )
-                (Request.User.dbUrl
-                    correctedSettings
-                )
+                            Err e ->
+                                Nothing
+                    )
+
+        dbNameCmd : Cmd (Maybe DatabaseName)
+        dbNameCmd =
+            Auth.dbName correctedSettings
+                |> Task.attempt
+                    (\r ->
+                        case r of
+                            Ok r ->
+                                r
+
+                            Err e ->
+                                Nothing
+                    )
 
         model =
             { pageState = Loaded initialPage
@@ -96,8 +120,41 @@ init val location =
 
         setDbUrlCmd =
             Cmd.map (\a -> SetDbUrl a) dbUrlCmd
+
+        setTitleDbNameCmd =
+            Cmd.map
+                (\dbName ->
+                    case dbName of
+                        Just dbName ->
+                            let
+                                ( name, desc ) =
+                                    case dbName.description of
+                                        Just desc ->
+                                            ( dbName.name, desc )
+
+                                        Nothing ->
+                                            ( dbName.name, "Diwata" )
+                            in
+                            SetTitle (Just (String.Extra.toTitleCase name ++ " - " ++ desc))
+
+                        Nothing ->
+                            SetTitle Nothing
+                )
+                dbNameCmd
+
+        setDbNameCmd =
+            Cmd.map
+                (\dbName ->
+                    SetDbName dbName
+                )
+                dbNameCmd
     in
-    model => Cmd.batch [ setDbUrlCmd ]
+    model
+        => Cmd.batch
+            [ setDbUrlCmd
+            , setTitleDbNameCmd
+            , setDbNameCmd
+            ]
 
 
 decodeUserFromJson : Value -> Maybe User
@@ -164,13 +221,6 @@ viewPage session isLoading page =
                 |> Html.map WindowMsg
 
 
-
--- SUBSCRIPTIONS --
--- Note: we aren't currently doing any page subscriptions, but I thought it would
--- be a good idea to put this in here as an example. If I were actually
--- maintaining this in production, I wouldn't bother until I needed this!
-
-
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
@@ -226,6 +276,8 @@ type Msg
     | WindowLoaded (Result PageLoadError Window.Model)
     | WindowArenaMsg WindowArena.Msg
     | SetUser (Maybe User)
+    | SetTitle (Maybe String)
+    | SetDbName (Maybe DatabaseName)
     | LoginMsg Login.Msg
     | WindowMsg Window.Msg
     | SetDbUrl (Maybe String)
@@ -356,6 +408,20 @@ updatePage page msg model =
             { model | session = { session | user = user } }
                 => cmd
 
+        ( SetTitle text, _ ) ->
+            model
+                => (case text of
+                        Just text ->
+                            title text
+
+                        Nothing ->
+                            Cmd.none
+                   )
+
+        ( SetDbName dbName, _ ) ->
+            { model | settings = Settings.setDbName model.settings dbName }
+                => Cmd.none
+
         ( LoginMsg subMsg, Login subModel ) ->
             let
                 ( ( pageModel, cmd ), msgFromPage ) =
@@ -418,3 +484,6 @@ main =
         , update = update
         , subscriptions = subscriptions
         }
+
+
+port title : String -> Cmd a

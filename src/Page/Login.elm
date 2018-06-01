@@ -12,7 +12,7 @@ import Html.Events exposing (onInput, onSubmit)
 import Http
 import Json.Decode as Decode exposing (Decoder, decodeString, field, string)
 import Json.Decode.Pipeline as Pipeline exposing (decode, optional)
-import Request.User
+import Request.Auth as Auth
 import Route exposing (Route)
 import Settings exposing (Settings)
 import Util exposing ((=>))
@@ -93,7 +93,7 @@ update msg model =
             case validate model of
                 [] ->
                     { model | errors = [] }
-                        => Http.send LoginCompleted (Request.User.login model.settings)
+                        => Http.send LoginCompleted (Auth.login model.settings)
                         => NoOp
 
                 errors ->

@@ -1,6 +1,7 @@
-module Request.User exposing (dbUrl, login)
+module Request.Auth exposing (dbName, dbUrl, login)
 
 import Data.AuthToken as AuthToken exposing (AuthToken, withAuthorization)
+import Data.DatabaseName as DatabaseName exposing (DatabaseName)
 import Data.User as User exposing (User)
 import Http
 import HttpBuilder exposing (RequestBuilder, withExpect, withQueryParams)
@@ -34,11 +35,21 @@ login settings =
 
 dbUrl : Settings -> Task Http.Error String
 dbUrl settings =
-    let
-        expect =
-            Decode.string
-                |> Http.expectJson
-    in
     apiUrl settings "/db_url"
         |> Http.getString
+        |> Http.toTask
+
+
+dbName : Settings -> Task Http.Error (Maybe DatabaseName)
+dbName settings =
+    let
+        expect =
+            Decode.nullable DatabaseName.decoder
+                |> Http.expectJson
+    in
+    apiUrl settings "/database_name"
+        |> HttpBuilder.get
+        |> header settings
+        |> HttpBuilder.withExpect expect
+        |> HttpBuilder.toRequest
         |> Http.toTask

@@ -1,11 +1,15 @@
 // the db_url and grouped is retrieved from the indexed db
 function init(){
     app = Elm.Main.fullscreen(
-        { //db_url: "postgres://postgres:p0stgr3s@localhost:5432/mock",
-          db_url: null,
+        { db_url: null,
+          db_name: null,
           api_endpoint: null,
           grouped: true,
         }
     );
+
+    app.ports.title.subscribe(function(title) {
+        document.title = title;
+    });
 }
 window.onload = init
