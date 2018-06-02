@@ -1219,14 +1219,10 @@ update session msg model =
             model => Cmd.none
 
         TabMsg ( section, tabModel, Tab.SearchboxMsg searchbox searchboxMsg ) ->
-            let
-                _ =
-                    Debug.log "Searchbox is changed in " section
+            updateAndRefreshTab section tabModel (Tab.SearchboxMsg searchbox searchboxMsg) model
 
-                ( updatedTabModel, updatedModel, subCmd ) =
-                    updateTab section tabModel (Tab.SearchboxMsg searchbox searchboxMsg) model
-            in
-            refreshTabPage section updatedTabModel updatedModel
+        TabMsg ( section, tabModel, Tab.ToggleSort columnName ) ->
+            updateAndRefreshTab section tabModel (Tab.ToggleSort columnName) model
 
         TabMsg ( section, tabModel, tabMsg ) ->
             let
@@ -1658,6 +1654,18 @@ updateValues fieldMsg model =
                 updatedValues
                 fieldSubCmd
             )
+
+
+updateAndRefreshTab : Section -> Tab.Model -> Tab.Msg -> Model -> ( Model, Cmd Msg )
+updateAndRefreshTab section tabModel tabMsg model =
+    let
+        ( updatedTabModel, updatedModel, subCmd ) =
+            updateTab section tabModel tabMsg model
+
+        ( updatedModel2, subCmd2 ) =
+            refreshTabPage section updatedTabModel updatedModel
+    in
+    updatedModel2 => Cmd.batch [ subCmd, subCmd2 ]
 
 
 updateTab : Section -> Tab.Model -> Tab.Msg -> Model -> ( Tab.Model, Model, Cmd Msg )
