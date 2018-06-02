@@ -1128,6 +1128,8 @@ type Msg
     | FieldMsg FieldContainer Field.Model Field.Msg
     | LookupNextPageReceived ( TableName, List Record )
     | LookupNextPageErrored String
+    | RefreshTabPageReceived ( Section, Tab.Model, Rows )
+    | RefreshTabPageError String
     | ChangeActiveTab Section TableName (Maybe TableName)
     | ToolbarMsg Toolbar.Msg
     | Maximize Bool
@@ -1216,69 +1218,22 @@ update session msg model =
             in
             model => Cmd.none
 
+        TabMsg ( section, tabModel, Tab.SearchboxMsg searchbox searchboxMsg ) ->
+            let
+                _ =
+                    Debug.log "Searchbox is changed in " section
+
+                ( updatedTabModel, updatedModel, subCmd ) =
+                    updateTab section tabModel (Tab.SearchboxMsg searchbox searchboxMsg) model
+            in
+            refreshTabPage section updatedTabModel updatedModel
+
         TabMsg ( section, tabModel, tabMsg ) ->
             let
-                ( newTabModel, subCmd ) =
-                    Tab.update tabMsg tabModel
-
-                action =
-                    model.arenaArg.action
-
-                doRequestPage =
-                    case action of
-                        Select _ ->
-                            requestNextPage section newTabModel model
-
-                        _ ->
-                            Cmd.none
-
-                ( updatedTabModel, tabCmd ) =
-                    case Tab.pageRequestNeeded newTabModel of
-                        True ->
-                            { newTabModel | pageRequestInFlight = True }
-                                => doRequestPage
-
-                        False ->
-                            newTabModel => Cmd.none
-
-                ( updatedHasManyTabs, hasManyCmds ) =
-                    updateTabModels tabMsg model.hasManyTabs updatedTabModel
-                        |> List.unzip
-
-                ( updatedIndirectTabs, indirectCmds ) =
-                    updateIndirectTabModels tabMsg model.indirectTabs updatedTabModel
-                        |> List.unzip
+                ( updatedTabMode, updatedModel, cmd ) =
+                    updateTab section tabModel tabMsg model
             in
-            { model
-                | hasManyTabs = updatedHasManyTabs
-                , indirectTabs = updatedIndirectTabs
-            }
-                => Cmd.batch
-                    ([ tabCmd
-                     , Cmd.map (\tabMsg -> TabMsg ( section, updatedTabModel, tabMsg )) subCmd
-                     ]
-                        ++ (List.map2
-                                (\hasManyModel hasManyCmd ->
-                                    Cmd.map
-                                        (\tabMsg ->
-                                            TabMsg ( HasMany, hasManyModel, tabMsg )
-                                        )
-                                        hasManyCmd
-                                )
-                                updatedHasManyTabs
-                                hasManyCmds
-                                ++ List.map2
-                                    (\( linker, indirectModel ) hasManyCmd ->
-                                        Cmd.map
-                                            (\tabMsg ->
-                                                TabMsg ( Indirect, indirectModel, tabMsg )
-                                            )
-                                            hasManyCmd
-                                    )
-                                    updatedIndirectTabs
-                                    indirectCmds
-                           )
-                    )
+            updatedModel => cmd
 
         FieldMsg Detail argField fieldMsg ->
             let
@@ -1434,6 +1389,17 @@ update session msg model =
             in
             updateAllFields (Field.ContainerScrollChanged scroll) updatedModel
 
+        RefreshTabPageReceived ( section, tabModel, rows ) ->
+            let
+                ( updatedTabModel, updatedModel, cmd ) =
+                    updateTab section tabModel (Tab.RefreshPageReceived rows) model
+            in
+            updatedModel => cmd
+
+        RefreshTabPageError e ->
+            { model | errors = model.errors ++ [ e ] }
+                => Cmd.none
+
 
 requestUpdateRecords : Settings -> TableName -> RecordDetailChangeset -> Cmd Msg
 requestUpdateRecords settings tableName changeset =
@@ -1557,16 +1523,22 @@ requestNextPage section tab model =
         sectionTable =
             tab.tab.tableName
 
+        query =
+            arenaArg.query
+
+        pageQuery =
+            Query.updatePage (tabPage + 1) query
+
         httpRequest =
             case recordId of
                 Just recordId ->
                     case section of
                         HasMany ->
-                            Records.fetchHasManyRecords model.settings mainTable recordId sectionTable (tabPage + 1)
+                            Records.fetchHasManyRecords model.settings mainTable recordId sectionTable pageQuery
                                 |> Http.toTask
 
                         Indirect ->
-                            Records.fetchIndirectRecords model.settings mainTable recordId sectionTable (tabPage + 1)
+                            Records.fetchIndirectRecords model.settings mainTable recordId sectionTable pageQuery
                                 |> Http.toTask
 
                 Nothing ->
@@ -1582,6 +1554,71 @@ requestNextPage section tab model =
                     Err e ->
                         TabMsg ( section, tab, Tab.NextPageError (toString e) )
             )
+
+
+refreshTabPage : Section -> Tab.Model -> Model -> ( Model, Cmd Msg )
+refreshTabPage section tabModel model =
+    let
+        _ =
+            Debug.log "refreshing in tab" tabModel.query
+
+        arenaArg =
+            model.arenaArg
+
+        query =
+            arenaArg.query
+
+        pageQuery =
+            Query.updatePage 1 query
+
+        updatedArenaArg =
+            { arenaArg | query = pageQuery }
+
+        selectedRow =
+            case model.selectedRow of
+                Just recordDetail ->
+                    Tab.getRecordIdString recordDetail.record model.window.mainTab
+
+                Nothing ->
+                    Debug.crash "There should be a selectedRecord"
+
+        _ =
+            Debug.log "selected row: " selectedRow
+
+        mainTable =
+            case model.arenaArg.tableName of
+                Just mainTable ->
+                    mainTable
+
+                Nothing ->
+                    Debug.crash "There has to be a main table here"
+
+        sectionTable =
+            tabModel.tab.tableName
+
+        request =
+            case section of
+                HasMany ->
+                    Records.fetchHasManyRecords model.settings mainTable selectedRow sectionTable tabModel.query
+
+                Indirect ->
+                    Records.fetchIndirectRecords model.settings mainTable selectedRow sectionTable tabModel.query
+
+        fetchCmd =
+            request
+                |> Http.toTask
+                |> Task.attempt
+                    (\result ->
+                        case result of
+                            Ok rows ->
+                                RefreshTabPageReceived ( section, tabModel, rows )
+
+                            Err e ->
+                                RefreshTabPageError (toString e)
+                    )
+    in
+    { model | arenaArg = updatedArenaArg }
+        => fetchCmd
 
 
 updateSizes : Session -> Model -> ( Model, Cmd Msg )
@@ -1621,6 +1658,80 @@ updateValues fieldMsg model =
                 updatedValues
                 fieldSubCmd
             )
+
+
+updateTab : Section -> Tab.Model -> Tab.Msg -> Model -> ( Tab.Model, Model, Cmd Msg )
+updateTab section tabModel tabMsg model =
+    let
+        ( newTabModel, subCmd ) =
+            Tab.update tabMsg tabModel
+
+        action =
+            model.arenaArg.action
+
+        doRequestPage =
+            case action of
+                Select _ ->
+                    requestNextPage section newTabModel model
+
+                _ ->
+                    Cmd.none
+
+        ( updatedTabModel, tabCmd ) =
+            case Tab.pageRequestNeeded newTabModel of
+                True ->
+                    { newTabModel | pageRequestInFlight = True }
+                        => doRequestPage
+
+                False ->
+                    newTabModel => Cmd.none
+
+        ( updatedHasManyTabs, hasManyCmds ) =
+            updateTabModels tabMsg model.hasManyTabs updatedTabModel
+                |> List.unzip
+
+        ( updatedIndirectTabs, indirectCmds ) =
+            updateIndirectTabModels tabMsg model.indirectTabs updatedTabModel
+                |> List.unzip
+
+        updatedTabCmd =
+            Cmd.map (\tabMsg -> TabMsg ( section, updatedTabModel, tabMsg )) subCmd
+
+        detailTabCmds =
+            (List.map2
+                (\hasManyModel hasManyCmd ->
+                    Cmd.map
+                        (\tabMsg ->
+                            TabMsg ( HasMany, hasManyModel, tabMsg )
+                        )
+                        hasManyCmd
+                )
+                updatedHasManyTabs
+                hasManyCmds
+                ++ List.map2
+                    (\( linker, indirectModel ) hasManyCmd ->
+                        Cmd.map
+                            (\tabMsg ->
+                                TabMsg ( Indirect, indirectModel, tabMsg )
+                            )
+                            hasManyCmd
+                    )
+                    updatedIndirectTabs
+                    indirectCmds
+            )
+                |> Cmd.batch
+    in
+    ( updatedTabModel
+    , { model
+        | hasManyTabs = updatedHasManyTabs
+        , indirectTabs = updatedIndirectTabs
+      }
+    , Cmd.batch
+        [ tabCmd
+        , updatedTabCmd
+        , detailTabCmds
+        ]
+    )
 
 
 updateAllTabs : Tab.Msg -> Model -> ( Model, Cmd Msg )

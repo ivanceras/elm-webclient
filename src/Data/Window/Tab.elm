@@ -4,6 +4,7 @@ module Data.Window.Tab
         , TabType(..)
         , columnNames
         , decoder
+        , getRecordIdString
         , primaryFields
         , recordId
         )
@@ -97,3 +98,9 @@ recordId record tab =
                 pkFields
     in
     Record.RecordId primaryValues
+
+
+getRecordIdString : Record -> Tab -> String
+getRecordIdString record tab =
+    recordId record tab
+        |> Record.idToString

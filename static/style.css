@@ -201,6 +201,15 @@ textarea {
     border-color: #ccc;
     height: 30px;
 }
+.tab-row-value  select
+ {
+    border-width: 0 0 1px 0;
+    -webkit-border-width: 0;
+    border-style: solid;
+    border-color: #ccc;
+    height: 30px;
+    background-color: transparent;
+}
 
 input.uuid-textbox{
     font-family: monospace;
@@ -219,21 +228,13 @@ a.primary-link {
     white-space: nowrap;
 }
 
-.tab-row-value  select
- {
-    border-width: 0 0 1px 0;
-    -webkit-border-width: 0;
-    border-style: solid;
-    border-color: #ccc;
-    height: 30px;
-    background-color: transparent;
-}
 
 .widget-value{
     padding: 0 5px;
     text-align: center;
 }
-.widget-value input {
+.widget-value input,
+.widget-value select{
     padding: 3px 3px;
     margin-top: 1px;
 }

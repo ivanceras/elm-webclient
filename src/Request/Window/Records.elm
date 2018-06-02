@@ -94,8 +94,12 @@ fetchSelected settings tableName selectedRow =
         |> HttpBuilder.toRequest
 
 
-fetchHasManyRecords : Settings -> TableName -> String -> TableName -> Int -> Http.Request Rows
-fetchHasManyRecords settings tableName selectedRow hasManyTable hasManyPage =
+fetchHasManyRecords : Settings -> TableName -> String -> TableName -> Query -> Http.Request Rows
+fetchHasManyRecords settings tableName selectedRow hasManyTable query =
+    let
+        queryStr =
+            Query.mainQueryToString query
+    in
     apiUrl settings
         ("/has_many_select/"
             ++ tableNameToString tableName
@@ -103,8 +107,8 @@ fetchHasManyRecords settings tableName selectedRow hasManyTable hasManyPage =
             ++ selectedRow
             ++ "/"
             ++ tableNameToString hasManyTable
-            ++ "/page/"
-            ++ toString hasManyPage
+            ++ "/"
+            ++ queryStr
         )
         |> HttpBuilder.get
         |> header settings
@@ -112,8 +116,12 @@ fetchHasManyRecords settings tableName selectedRow hasManyTable hasManyPage =
         |> HttpBuilder.toRequest
 
 
-fetchIndirectRecords : Settings -> TableName -> String -> TableName -> Int -> Http.Request Rows
-fetchIndirectRecords settings tableName selectedRow hasManyTable hasManyPage =
+fetchIndirectRecords : Settings -> TableName -> String -> TableName -> Query -> Http.Request Rows
+fetchIndirectRecords settings tableName selectedRow hasManyTable query =
+    let
+        queryStr =
+            Query.mainQueryToString query
+    in
     apiUrl settings
         ("/indirect_select/"
             ++ tableNameToString tableName
@@ -121,8 +129,8 @@ fetchIndirectRecords settings tableName selectedRow hasManyTable hasManyPage =
             ++ selectedRow
             ++ "/"
             ++ tableNameToString hasManyTable
-            ++ "/page/"
-            ++ toString hasManyPage
+            ++ "/"
+            ++ queryStr
         )
         |> HttpBuilder.get
         |> header settings
