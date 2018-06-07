@@ -1,7 +1,7 @@
 port module Page.WindowArena
     exposing
         ( Model
-        , Msg
+        , Msg(..)
         , init
         , subscriptions
         , update
@@ -42,7 +42,7 @@ import Views.Window.GroupedWindow as GroupedWindow
 import Views.Window.Row as Row
 import Views.Window.Tab as Tab
 import Views.Window.Toolbar as Toolbar
-import Window as BrowserWindow
+import Window as BrowserWindow exposing (Size)
 
 
 -- MODEL --
@@ -57,6 +57,7 @@ type alias Model =
     , errors : List String
     , loadingSelectedRecord : Bool
     , isDetailedRecordMaximized : Bool
+    , containerSize : Size
     }
 
 
@@ -64,8 +65,8 @@ handleLoadError e =
     pageLoadError Page.WindowArena ("WindowArena is currently unavailable. Error: " ++ toString e)
 
 
-init : Settings -> Session -> ArenaArg -> Task PageLoadError Model
-init settings session arenaArg =
+init : Settings -> Session -> ArenaArg -> Size -> Task PageLoadError Model
+init settings session arenaArg containerSize =
     let
         _ =
             Debug.log "window arena: " arenaArg
@@ -101,7 +102,7 @@ init settings session arenaArg =
                         (\window ->
                             case window of
                                 Just window ->
-                                    Window.init settings session tableName window arenaArg
+                                    Window.init settings session tableName window arenaArg (calcWindowSize containerSize)
                                         |> Task.map Just
                                         |> Task.mapError handleLoadError
 
@@ -133,7 +134,7 @@ init settings session arenaArg =
 
                                         _ ->
                                             -- For Copy, Select, and New
-                                            DetailedRecord.init isDetailedRecordMaximized settings tableName arenaArg.action arenaArg window
+                                            DetailedRecord.init isDetailedRecordMaximized settings tableName arenaArg.action arenaArg window (calcDetailedRecordSize containerSize)
                                                 |> Task.map Just
                                                 |> Task.mapError handleLoadError
 
@@ -155,6 +156,7 @@ init settings session arenaArg =
             , errors = []
             , loadingSelectedRecord = False
             , isDetailedRecordMaximized = isDetailedRecordMaximized
+            , containerSize = containerSize
             }
         )
         loadActiveWindow
@@ -319,7 +321,7 @@ type Msg
     = GroupedWindowMsg GroupedWindow.Msg
     | WindowMsg Window.Msg
     | DetailedRecordMsg DetailedRecord.Msg
-    | WindowResized BrowserWindow.Size
+    | BrowserResized Size
     | InitializedSelectedRow ( DetailedRecord.Model, Maybe RecordId )
     | FailedToInitializeSelectedRow
 
@@ -361,7 +363,7 @@ update session msg model =
                     { arenaArg | action = Copy recordIdString }
 
                 initSelectedRow =
-                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName (Copy recordIdString) copyArenaArg activeWindow
+                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName (Copy recordIdString) copyArenaArg activeWindow (calcDetailedRecordSize model.containerSize)
 
                 initSelectedRowTask =
                     Task.attempt
@@ -395,7 +397,7 @@ update session msg model =
                             Debug.crash "There should be an activeWindow"
 
                 initSelectedRow =
-                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName arenaArg.action arenaArg activeWindow
+                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName arenaArg.action arenaArg activeWindow (calcDetailedRecordSize model.containerSize)
 
                 initSelectedRowTask =
                     Task.attempt
@@ -423,7 +425,7 @@ update session msg model =
                             Debug.crash "There should be an activeWindow"
 
                 initSelectedRow =
-                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName arenaArg.action arenaArg activeWindow
+                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName arenaArg.action arenaArg activeWindow (calcDetailedRecordSize model.containerSize)
 
                 initSelectedRowTask =
                     Task.attempt
@@ -476,7 +478,7 @@ update session msg model =
                     { arenaArg | action = NewRecord InCard }
 
                 initSelectedRow =
-                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName (NewRecord InCard) newArenaArg activeWindow
+                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName (NewRecord InCard) newArenaArg activeWindow (calcDetailedRecordSize model.containerSize)
 
                 initNewRecordTask =
                     Task.attempt
@@ -507,7 +509,7 @@ update session msg model =
                             activeWindow.lookup
 
                         ( newWindow, subCmd ) =
-                            Window.update session subMsg activeWindow
+                            Window.update subMsg activeWindow
 
                         ( updatedWindow, windowCmd ) =
                             case Window.dropdownPageRequestNeeded activeWindow of
@@ -544,7 +546,7 @@ update session msg model =
                         Just selectedRow ->
                             let
                                 ( detailedRecord, subCmd ) =
-                                    DetailedRecord.update session (DetailedRecord.Maximize v) selectedRow
+                                    DetailedRecord.update (DetailedRecord.Maximize v) selectedRow
                             in
                             ( Just detailedRecord, Cmd.map DetailedRecordMsg subCmd )
 
@@ -565,7 +567,7 @@ update session msg model =
                             selectedRow.lookup
 
                         ( newDetailedRecord, subCmd ) =
-                            DetailedRecord.update session subMsg selectedRow
+                            DetailedRecord.update subMsg selectedRow
 
                         ( updatedDetailedRecord, detailCmd ) =
                             case DetailedRecord.dropdownPageRequestNeeded selectedRow of
@@ -589,8 +591,85 @@ update session msg model =
                 Nothing ->
                     model => Cmd.none
 
-        WindowResized size ->
-            model => Cmd.none
+        BrowserResized size ->
+            let
+                _ =
+                    Debug.log "updating containerSize in windowArena" size
+
+                updatedModel =
+                    { model | containerSize = size }
+
+                ( updatedModel2, subCmd2 ) =
+                    updateActiveWindowSize updatedModel
+
+                ( updatedModel3, subCmd3 ) =
+                    updateDetailedRecordSize updatedModel2
+            in
+            updatedModel3 => Cmd.batch [ subCmd2, subCmd2 ]
+
+
+updateDetailedRecordSize : Model -> ( Model, Cmd Msg )
+updateDetailedRecordSize model =
+    updateSelectedRow (DetailedRecord.ContainerSizeChanged (calcDetailedRecordSize model.containerSize)) model
+
+
+updateSelectedRow : DetailedRecord.Msg -> Model -> ( Model, Cmd Msg )
+updateSelectedRow detailMsg model =
+    let
+        ( selectedRow, subCmd ) =
+            case model.selectedRow of
+                Just selectedRow ->
+                    DetailedRecord.update detailMsg selectedRow
+                        |> Tuple.mapFirst Just
+                        |> Tuple.mapSecond (Cmd.map DetailedRecordMsg)
+
+                Nothing ->
+                    ( model.selectedRow, Cmd.none )
+    in
+    { model | selectedRow = selectedRow }
+        => subCmd
+
+
+calcWindowSize : Size -> Size
+calcWindowSize containerSize =
+    let
+        heightDeductions =
+            Constant.bannerHeight + Constant.tabNameHeight
+    in
+    { width = containerSize.width - Constant.sidebarWidth
+    , height = containerSize.height - heightDeductions
+    }
+
+
+calcDetailedRecordSize : Size -> Size
+calcDetailedRecordSize containerSize =
+    calcWindowSize containerSize
+
+
+updateActiveWindowSize : Model -> ( Model, Cmd Msg )
+updateActiveWindowSize model =
+    let
+        windowSize =
+            calcWindowSize model.containerSize
+    in
+    updateActiveWindow (Window.ContainerSizeChanged windowSize) model
+
+
+updateActiveWindow : Window.Msg -> Model -> ( Model, Cmd Msg )
+updateActiveWindow windowMsg model =
+    let
+        ( activeWindow, subCmd ) =
+            case model.activeWindow of
+                Just activeWindow ->
+                    Window.update windowMsg activeWindow
+                        |> Tuple.mapFirst Just
+                        |> Tuple.mapSecond (Cmd.map WindowMsg)
+
+                Nothing ->
+                    ( model.activeWindow, Cmd.none )
+    in
+    { model | activeWindow = activeWindow }
+        => subCmd
 
 
 closeRecord : Model -> ( Model, Cmd Msg )
@@ -649,7 +728,6 @@ subscriptions model =
     Sub.batch
         [ detailedRecordSubscriptions model
         , windowSubscriptions model
-        , BrowserWindow.resizes WindowResized
         ]
 
 

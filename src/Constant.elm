@@ -94,3 +94,15 @@ rowControlIconSize =
 
 columnSearchIconSize =
     14
+
+
+sidebarWidth =
+    220
+
+
+bannerHeight =
+    100
+
+
+tabNameHeight =
+    41

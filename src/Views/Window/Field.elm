@@ -216,7 +216,7 @@ calcWidgetSize allotedTabWidth presentation field =
 
                 --- 1000 should be alloted tab width - 20
                 Field.Long ->
-                    ( Field.Long, 1000, fieldHeight )
+                    ( Field.Long, allotedTabWidth - 400, fieldHeight )
 
         InList ->
             let
@@ -381,6 +381,7 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                             [ styles
                             , value valueString
                             , style [ ( "height", px widgetHeight ) ]
+                            , style [ ( "width", px allotedTabWidth ) ]
                             , style [ ( "min-height", px 24 ) ]
                             , style [ ( "min-width", px 100 ) ]
                             , onInput StringValueChanged
@@ -827,6 +828,7 @@ type Msg
     | FieldBlurred
     | ContainerScrollChanged Scroll
     | LookupChanged Lookup
+    | AllotedTabWidthChanged Int
 
 
 type Widget
@@ -1075,6 +1077,10 @@ update msg model =
 
         LookupChanged lookup ->
             { model | lookup = lookup }
+                => Cmd.none
+
+        AllotedTabWidthChanged width ->
+            { model | allotedTabWidth = width }
                 => Cmd.none
 
 

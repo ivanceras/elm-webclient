@@ -3,7 +3,6 @@ module Views.Window
         ( Model
         , Msg(..)
         , calcMainTabSize
-        , calcMainWindowSize
         , dropdownPageRequestNeeded
         , init
         , subscriptions
@@ -14,6 +13,7 @@ module Views.Window
 {-| Viewing an individual window.
 -}
 
+import Constant
 import Data.Query as Query
 import Data.Query.Sort as Sort exposing (Sort)
 import Data.Session as Session exposing (Session)
@@ -47,7 +47,7 @@ import Views.Window.Field as Field
 import Views.Window.Row as Row
 import Views.Window.Tab as Tab
 import Views.Window.Toolbar as Toolbar
-import Window as BrowserWindow
+import Window as BrowserWindow exposing (Size)
 
 
 -- MODEL --
@@ -62,36 +62,8 @@ type alias Model =
     , arenaArg : ArenaArg
     , dropdownPageRequestInFlight : Bool
     , settings : Settings
+    , containerSize : Size
     }
-
-
-calcMainWindowSize : BrowserWindow.Size -> ( Float, Float )
-calcMainWindowSize browserSize =
-    let
-        bannerHeight =
-            100
-
-        tabNameHeight =
-            41
-
-        totalHeightDeductions =
-            bannerHeight + tabNameHeight
-
-        sidebarWidth =
-            220
-
-        totalWidthDeductions =
-            sidebarWidth
-
-        browserHeight =
-            toFloat browserSize.height
-
-        browserWidth =
-            toFloat browserSize.width
-    in
-    ( browserWidth - totalWidthDeductions
-    , browserHeight - totalHeightDeductions
-    )
 
 
 {-|
@@ -100,11 +72,11 @@ calcMainWindowSize browserSize =
     The mainTab contains the list of records in the main window
 
 -}
-calcMainTabSize : BrowserWindow.Size -> ( Float, Float )
-calcMainTabSize browserSize =
+calcMainTabSize : Size -> ( Float, Float )
+calcMainTabSize containerSize =
     let
         ( mainWindowWidth, mainWindowHeight ) =
-            calcMainWindowSize browserSize
+            ( toFloat containerSize.width, toFloat containerSize.height )
 
         toolbarHeight =
             90.0
@@ -129,8 +101,8 @@ calcMainTabSize browserSize =
     )
 
 
-init : Settings -> Session -> TableName -> Window -> ArenaArg -> Task PageLoadError Model
-init settings session tableName window arenaArg =
+init : Settings -> Session -> TableName -> Window -> ArenaArg -> Size -> Task PageLoadError Model
+init settings session tableName window arenaArg containerSize =
     let
         maybeAuthToken =
             Maybe.map .token session.user
@@ -140,9 +112,6 @@ init settings session tableName window arenaArg =
 
         query =
             arenaArg.query
-
-        getBrowserSize =
-            BrowserWindow.size
 
         loadRecords =
             Request.Window.Records.listPageWithQuery settings maybeAuthToken tableName query
@@ -163,12 +132,11 @@ init settings session tableName window arenaArg =
             pageLoadError Page.Other "Window is currently unavailable."
 
         mainTabTask =
-            Task.map3
-                (\records size lookup ->
-                    Tab.init arenaArg settings selectedRecordId (calcMainTabSize size) query window.mainTab InMain records lookup
+            Task.map2
+                (\records lookup ->
+                    Tab.init arenaArg settings selectedRecordId (calcMainTabSize containerSize) query window.mainTab InMain records lookup
                 )
                 loadRecords
-                getBrowserSize
                 loadWindowLookups
                 |> Task.mapError (handleLoadError "in mainTabTask")
     in
@@ -182,6 +150,7 @@ init settings session tableName window arenaArg =
             , arenaArg = arenaArg
             , dropdownPageRequestInFlight = False
             , settings = settings
+            , containerSize = containerSize
             }
         )
         mainTabTask
@@ -239,10 +208,11 @@ type Msg
     | TabMsg Tab.Msg
     | LookupNextPageReceived ( TableName, List Record )
     | LookupNextPageErrored String
+    | ContainerSizeChanged Size
 
 
-update : Session -> Msg -> Model -> ( Model, Cmd Msg )
-update session msg model =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
     let
         tableName =
             model.tableName
@@ -278,15 +248,6 @@ update session msg model =
         CloseWindow ->
             model => Cmd.none
 
-        {-
-           TabMsg (Tab.ToolbarMsg Toolbar.ClickedRefresh) ->
-               let
-                   mainTab =
-                       model.mainTab
-               in
-               model
-                   => refreshPage mainTab model
-        -}
         TabMsg (Tab.ToolbarMsg Toolbar.ClickedMainDelete) ->
             let
                 selectedCount =
@@ -390,6 +351,16 @@ update session msg model =
 
         LookupNextPageErrored e ->
             Debug.crash "Error loading next page lookup" e
+
+        ContainerSizeChanged size ->
+            let
+                updatedModel =
+                    { model | containerSize = size }
+
+                tabSize =
+                    calcMainTabSize size
+            in
+            updateMainTab (Tab.SetSize tabSize) updatedModel
 
 
 updateMainTab : Tab.Msg -> Model -> ( Model, Cmd Msg )
@@ -501,6 +472,5 @@ requestDeleteRecords settings tableName recordIds =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ BrowserWindow.resizes (\size -> TabMsg (Tab.SetSize (calcMainTabSize size)))
-        , Sub.map TabMsg (Tab.subscriptions model.mainTab)
+        [ Sub.map TabMsg (Tab.subscriptions model.mainTab)
         ]

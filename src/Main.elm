@@ -22,6 +22,7 @@ import Task
 import Util exposing ((=>))
 import Views.Page as Page exposing (ActivePage)
 import Views.Window as Window
+import Window as BrowserWindow exposing (Size)
 
 
 -- WARNING: Based on discussions around how asset management features
@@ -36,7 +37,6 @@ type Page
     | Errored PageLoadError
     | WindowArena WindowArena.Model
     | Login Login.Model
-    | Window Window.Model
 
 
 type PageState
@@ -54,6 +54,7 @@ type alias Model =
     , pageState : PageState
     , settings : Settings
     , location : Location
+    , browserSize : Size
     }
 
 
@@ -116,6 +117,7 @@ init val location =
             , session = { user = decodeUserFromJson val }
             , settings = correctedSettings
             , location = location
+            , browserSize = Size 0 0
             }
 
         setDbUrlCmd =
@@ -148,12 +150,29 @@ init val location =
                     SetDbName dbName
                 )
                 dbNameCmd
+
+        getBrowserSize =
+            BrowserWindow.size
+                |> Task.attempt
+                    (\r ->
+                        let
+                            _ =
+                                Debug.log "got browser size" r
+                        in
+                        case r of
+                            Ok r ->
+                                BrowserResized r
+
+                            Err e ->
+                                Debug.crash "This should never happen"
+                    )
     in
     model
         => Cmd.batch
             [ setDbUrlCmd
             , setTitleDbNameCmd
             , setDbNameCmd
+            , getBrowserSize
             ]
 
 
@@ -215,17 +234,13 @@ viewPage session isLoading page =
                 |> frame Page.Other
                 |> Html.map LoginMsg
 
-        Window subModel ->
-            Window.view session subModel
-                |> frame Page.Other
-                |> Html.map WindowMsg
-
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ pageSubscriptions (getPage model.pageState)
         , Sub.map SetUser sessionChange
+        , BrowserWindow.resizes BrowserResized
         ]
 
 
@@ -262,9 +277,6 @@ pageSubscriptions page =
         Login _ ->
             Sub.none
 
-        Window _ ->
-            Sub.none
-
 
 
 -- UPDATE --
@@ -273,14 +285,13 @@ pageSubscriptions page =
 type Msg
     = SetRoute (Maybe Route)
     | HomeLoaded (Result PageLoadError WindowArena.Model)
-    | WindowLoaded (Result PageLoadError Window.Model)
     | WindowArenaMsg WindowArena.Msg
     | SetUser (Maybe User)
     | SetTitle (Maybe String)
     | SetDbName (Maybe DatabaseName)
     | LoginMsg Login.Msg
-    | WindowMsg Window.Msg
     | SetDbUrl (Maybe String)
+    | BrowserResized Size
 
 
 setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -323,7 +334,7 @@ setRoute maybeRoute model =
             { model | pageState = Loaded NotFound } => Cmd.none
 
         Just (Route.WindowArena arenaArg) ->
-            transition HomeLoaded (WindowArena.init model.settings model.session arenaArg)
+            transition HomeLoaded (WindowArena.init model.settings model.session arenaArg model.browserSize)
 
         Just Route.Login ->
             { model | pageState = Loaded (Login (Login.initialModel settings)) } => Cmd.none
@@ -387,12 +398,6 @@ updatePage page msg model =
         ( HomeLoaded (Err error), _ ) ->
             { model | pageState = Loaded (Errored error) } => Cmd.none
 
-        ( WindowLoaded (Ok subModel), _ ) ->
-            { model | pageState = Loaded (Window subModel) } => Cmd.none
-
-        ( WindowLoaded (Err error), _ ) ->
-            { model | pageState = Loaded (Errored error) } => Cmd.none
-
         ( SetUser user, _ ) ->
             let
                 session =
@@ -441,9 +446,6 @@ updatePage page msg model =
         ( WindowArenaMsg subMsg, WindowArena subModel ) ->
             toPage WindowArena WindowArenaMsg (WindowArena.update session) subMsg subModel
 
-        ( WindowMsg subMsg, Window subModel ) ->
-            toPage Window WindowMsg (Window.update model.session) subMsg subModel
-
         ( SetDbUrl dbUrl, _ ) ->
             let
                 _ =
@@ -461,6 +463,25 @@ updatePage page msg model =
                     }
             in
             setRoute (Route.fromLocation updatedModel.location) updatedModel
+
+        ( BrowserResized size, WindowArena subModel ) ->
+            let
+                _ =
+                    Debug.log "browserResized: " size
+
+                ( updatedModel2, subCmd ) =
+                    toPage WindowArena WindowArenaMsg (WindowArena.update session) (WindowArena.BrowserResized size) subModel
+            in
+            { updatedModel2 | browserSize = size }
+                => subCmd
+
+        ( BrowserResized size, _ ) ->
+            let
+                _ =
+                    Debug.log "browserResized for all pages: " size
+            in
+            { model | browserSize = size }
+                => Cmd.none
 
         ( _, NotFound ) ->
             -- Disregard incoming messages when we're on the
