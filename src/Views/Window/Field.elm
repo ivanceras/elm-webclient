@@ -216,7 +216,8 @@ calcWidgetSize allotedTabWidth presentation field =
 
                 --- 1000 should be alloted tab width - 20
                 Field.Long ->
-                    ( Field.Long, allotedTabWidth - 400, fieldHeight )
+                    --    ( Field.Long, allotedTabWidth - 400, fieldHeight )
+                    ( Field.Long, 1000, fieldHeight )
 
         InList ->
             let
