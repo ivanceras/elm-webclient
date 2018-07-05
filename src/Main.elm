@@ -155,10 +155,6 @@ init val location =
             BrowserWindow.size
                 |> Task.attempt
                     (\r ->
-                        let
-                            _ =
-                                Debug.log "got browser size" r
-                        in
                         case r of
                             Ok r ->
                                 BrowserResized r
@@ -466,9 +462,6 @@ updatePage page msg model =
 
         ( BrowserResized size, WindowArena subModel ) ->
             let
-                _ =
-                    Debug.log "browserResized: " size
-
                 ( updatedModel2, subCmd ) =
                     toPage WindowArena WindowArenaMsg (WindowArena.update session) (WindowArena.BrowserResized size) subModel
             in
@@ -476,10 +469,6 @@ updatePage page msg model =
                 => subCmd
 
         ( BrowserResized size, _ ) ->
-            let
-                _ =
-                    Debug.log "browserResized for all pages: " size
-            in
             { model | browserSize = size }
                 => Cmd.none
 

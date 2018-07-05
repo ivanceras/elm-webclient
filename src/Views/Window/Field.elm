@@ -214,10 +214,8 @@ calcWidgetSize allotedTabWidth presentation field =
                 Field.Short ->
                     ( Field.Short, 200, fieldHeight )
 
-                --- 1000 should be alloted tab width - 20
                 Field.Long ->
-                    --    ( Field.Long, allotedTabWidth - 400, fieldHeight )
-                    ( Field.Long, 1000, fieldHeight )
+                    ( Field.Long, allotedTabWidth - 400, fieldHeight )
 
         InList ->
             let
@@ -282,14 +280,7 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
         styles =
             style
                 [ ( "text-align", alignmentString )
-                , ( "width"
-                  , case widthClass of
-                        Field.Long ->
-                            "90%"
-
-                        Field.Short ->
-                            px widgetWidth
-                  )
+                , ( "width", px widgetWidth )
                 ]
 
         dataType =
@@ -382,7 +373,6 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
                             [ styles
                             , value valueString
                             , style [ ( "height", px widgetHeight ) ]
-                            , style [ ( "width", px allotedTabWidth ) ]
                             , style [ ( "min-height", px 24 ) ]
                             , style [ ( "min-width", px 100 ) ]
                             , onInput StringValueChanged
@@ -517,9 +507,6 @@ createWidget allotedTabWidth presentation record tab field maybeValue =
 
         FileUpload ->
             let
-                _ =
-                    Debug.log "fileupload for" valueString
-
                 iconColor =
                     Constant.iconColor
 
@@ -1037,25 +1024,19 @@ update msg model =
 
         ResetChanges ->
             let
-                updatedWidget =
-                    updateWidgetValue model model.value
+                updatedModel =
+                    { model | editValue = model.value }
             in
-            { model
-                | editValue = model.value
-                , widget = updatedWidget
-            }
-                => Cmd.none
+            updateWidgetValue updatedModel updatedModel.value
 
         SetValue value ->
             let
-                updatedWidget =
-                    updateWidgetValue model (Just value)
+                updatedModel =
+                    { model
+                        | editValue = Just value
+                    }
             in
-            { model
-                | editValue = Just value
-                , widget = updatedWidget
-            }
-                => Cmd.none
+            updateWidgetValue updatedModel (Just value)
 
         -- this should be listened in the windowArena
         PrimaryLinkClicked tableName recordIdString ->
@@ -1081,8 +1062,12 @@ update msg model =
                 => Cmd.none
 
         AllotedTabWidthChanged width ->
-            { model | allotedTabWidth = width }
-                => Cmd.none
+            let
+                updatedModel =
+                    { model | allotedTabWidth = width }
+            in
+            -- TODO: Fix this, refactor updateWidgetValue to independently update the sizes
+            updateWidgetValue updatedModel updatedModel.editValue
 
 
 updateDropdownDisplay : DropdownDisplay.Msg -> Model -> ( Model, Cmd Msg )
@@ -1100,7 +1085,7 @@ updateDropdownDisplay dropdownMsg model =
             model => Cmd.none
 
 
-updateWidgetValue : Model -> Maybe Value -> Widget
+updateWidgetValue : Model -> Maybe Value -> ( Model, Cmd Msg )
 updateWidgetValue model value =
     let
         widget =
@@ -1121,4 +1106,56 @@ updateWidgetValue model value =
         allotedTabWidth =
             model.allotedTabWidth
     in
-    createWidget allotedTabWidth presentation record tab field value
+    case widget of
+        TableDropdown dropdown ->
+            let
+                updatedWidget =
+                    case value of
+                        Just value ->
+                            let
+                                ( updatedWidget, subCmd ) =
+                                    DropdownDisplay.update (DropdownDisplay.SelectionChanged value) dropdown
+                            in
+                            TableDropdown updatedWidget
+
+                        Nothing ->
+                            widget
+            in
+            { model
+                | widget = updatedWidget
+            }
+                => Cmd.none
+
+        FixDropdown dropdown ->
+            let
+                updatedWidget =
+                    case value of
+                        Just value ->
+                            let
+                                ( updatedWidget, subCmd ) =
+                                    case value of
+                                        Value.Text text ->
+                                            FixDropdown.update (FixDropdown.SelectionChanged text) dropdown
+
+                                        _ ->
+                                            Debug.crash "Fix dropdown other value is not supported"
+                            in
+                            FixDropdown updatedWidget
+
+                        Nothing ->
+                            widget
+            in
+            { model
+                | widget = updatedWidget
+            }
+                => Cmd.none
+
+        HtmlWidget html ->
+            let
+                updatedWidget =
+                    createWidget allotedTabWidth presentation record tab field value
+            in
+            { model
+                | widget = updatedWidget
+            }
+                => Cmd.none

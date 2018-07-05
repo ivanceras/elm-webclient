@@ -592,10 +592,6 @@ createFields allotedTabWidth action tab lookup record =
 
 detailAllotedSize : Model -> ( Float, Float )
 detailAllotedSize model =
-    let
-        _ =
-            Debug.log "container size: " model.containerSize
-    in
     allotedSize model.isMaximized model.containerSize
 
 
@@ -1386,9 +1382,6 @@ update msg model =
 
         ContainerSizeChanged size ->
             let
-                _ =
-                    Debug.log "containerSize changed in detailed record" size
-
                 updatedModel =
                     { model | containerSize = size }
 
@@ -1397,9 +1390,6 @@ update msg model =
 
                 ( allotedWidth, allotedHeight ) =
                     detailAllotedSize updatedModel2
-
-                _ =
-                    Debug.log "alloted width" allotedWidth
 
                 ( updatedModel3, subCmd3 ) =
                     updateAllFields (Field.AllotedTabWidthChanged (round allotedWidth)) updatedModel2
@@ -1565,9 +1555,6 @@ requestNextPage section tab model =
 refreshTabPage : Section -> Tab.Model -> Model -> ( Model, Cmd Msg )
 refreshTabPage section tabModel model =
     let
-        _ =
-            Debug.log "refreshing in tab" tabModel.query
-
         arenaArg =
             model.arenaArg
 
@@ -1587,9 +1574,6 @@ refreshTabPage section tabModel model =
 
                 Nothing ->
                     Debug.crash "There should be a selectedRecord"
-
-        _ =
-            Debug.log "selected row: " selectedRow
 
         mainTable =
             case model.arenaArg.tableName of

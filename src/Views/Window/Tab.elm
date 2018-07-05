@@ -1111,9 +1111,6 @@ update msg model =
                                 page
                         )
                         model.pageRows
-
-                _ =
-                    Debug.log "unlinked" selected
             in
             { model
                 | unlinked = selected
