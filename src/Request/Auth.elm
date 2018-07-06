@@ -1,4 +1,4 @@
-module Request.Auth exposing (dbName, dbUrl, login)
+module Request.Auth exposing (dbName, login, loginRequired)
 
 import Data.AuthToken as AuthToken exposing (AuthToken, withAuthorization)
 import Data.DatabaseName as DatabaseName exposing (DatabaseName)
@@ -33,8 +33,8 @@ login settings =
         |> HttpBuilder.toRequest
 
 
-dbUrl : Settings -> Task Http.Error String
-dbUrl settings =
+loginRequired : Settings -> Task Http.Error String
+loginRequired settings =
     apiUrl settings "/db_url"
         |> Http.getString
         |> Http.toTask

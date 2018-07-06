@@ -86,9 +86,9 @@ init val location =
         _ =
             Debug.log "corrected settings: " correctedSettings
 
-        dbUrlCmd : Cmd (Maybe String)
-        dbUrlCmd =
-            Auth.dbUrl correctedSettings
+        loginRequiredCmd : Cmd (Maybe String)
+        loginRequiredCmd =
+            Auth.loginRequired correctedSettings
                 |> Task.attempt
                     (\r ->
                         case r of
@@ -121,7 +121,7 @@ init val location =
             }
 
         setDbUrlCmd =
-            Cmd.map (\a -> SetDbUrl a) dbUrlCmd
+            Cmd.map (\a -> SetDbUrl a) loginRequiredCmd
 
         setTitleDbNameCmd =
             Cmd.map
