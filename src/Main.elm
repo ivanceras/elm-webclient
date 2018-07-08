@@ -86,17 +86,17 @@ init val location =
         _ =
             Debug.log "corrected settings: " correctedSettings
 
-        loginRequiredCmd : Cmd (Maybe String)
+        loginRequiredCmd : Cmd Bool
         loginRequiredCmd =
             Auth.loginRequired correctedSettings
                 |> Task.attempt
                     (\r ->
                         case r of
                             Ok r ->
-                                Just r
+                                r
 
                             Err e ->
-                                Nothing
+                                False
                     )
 
         dbNameCmd : Cmd (Maybe DatabaseName)
@@ -120,8 +120,8 @@ init val location =
             , browserSize = Size 0 0
             }
 
-        setDbUrlCmd =
-            Cmd.map (\a -> SetDbUrl a) loginRequiredCmd
+        setLoginRequiredCmd =
+            Cmd.map SetLoginRequired loginRequiredCmd
 
         setTitleDbNameCmd =
             Cmd.map
@@ -165,7 +165,7 @@ init val location =
     in
     model
         => Cmd.batch
-            [ setDbUrlCmd
+            [ setLoginRequiredCmd
             , setTitleDbNameCmd
             , setDbNameCmd
             , getBrowserSize
@@ -286,7 +286,7 @@ type Msg
     | SetTitle (Maybe String)
     | SetDbName (Maybe DatabaseName)
     | LoginMsg Login.Msg
-    | SetDbUrl (Maybe String)
+    | SetLoginRequired Bool
     | BrowserResized Size
 
 
@@ -318,12 +318,15 @@ setRoute maybeRoute model =
             pageErrored model
 
         correctedRoute =
-            case settings.dbUrl of
-                Just dbUrl ->
-                    maybeRoute
+            if settings.loginRequired then
+                case settings.cred of
+                    Just cred ->
+                        maybeRoute
 
-                Nothing ->
-                    Just Route.Login
+                    Nothing ->
+                        Just Route.Login
+            else
+                maybeRoute
     in
     case correctedRoute of
         Nothing ->
@@ -442,20 +445,10 @@ updatePage page msg model =
         ( WindowArenaMsg subMsg, WindowArena subModel ) ->
             toPage WindowArena WindowArenaMsg (WindowArena.update session) subMsg subModel
 
-        ( SetDbUrl dbUrl, _ ) ->
+        ( SetLoginRequired isRequired, _ ) ->
             let
-                _ =
-                    Debug.log "Setting db_url " dbUrl
-
                 updatedModel =
-                    { model
-                        | settings =
-                            case dbUrl of
-                                Just dbUrl ->
-                                    Settings.setDbUrl model.settings dbUrl
-
-                                Nothing ->
-                                    model.settings
+                    { model | settings = Settings.setDbUrl model.settings isRequired
                     }
             in
             setRoute (Route.fromLocation updatedModel.location) updatedModel

@@ -33,10 +33,12 @@ login settings =
         |> HttpBuilder.toRequest
 
 
-loginRequired : Settings -> Task Http.Error String
+loginRequired : Settings -> Task Http.Error Bool
 loginRequired settings =
-    apiUrl settings "/db_url"
-        |> Http.getString
+    apiUrl settings "/is_login_required"
+        |> HttpBuilder.get
+        |> HttpBuilder.withExpect (Http.expectJson Decode.bool)
+        |> HttpBuilder.toRequest
         |> Http.toTask
 
 

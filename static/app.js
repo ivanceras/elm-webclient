@@ -1,7 +1,7 @@
 // the db_url and grouped is retrieved from the indexed db
 function init(){
     app = Elm.Main.fullscreen(
-        { db_url: null,
+        { login_required: false,
           db_name: null,
           api_endpoint: null,
           grouped: true,

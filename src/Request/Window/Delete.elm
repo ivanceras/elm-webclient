@@ -13,6 +13,7 @@ import HttpBuilder exposing (RequestBuilder, withExpect, withQueryParams)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Request.Helpers exposing (apiUrl)
+import Request.Window.Records exposing (header)
 import Settings exposing (Settings)
 
 
@@ -37,6 +38,7 @@ deleteRecords settings maybeToken tableName recordIdList =
     apiUrl settings ("/delete/" ++ tableNameToString tableName)
         |> HttpBuilder.delete
         |> HttpBuilder.withJsonBody jsonBody
+        |> header settings
         |> HttpBuilder.withExpect (Http.expectJson Record.rowsDecoder)
         |> withAuthorization maybeToken
         |> HttpBuilder.toRequest

@@ -25,7 +25,8 @@ import Views.Form as Form
 
 type alias Model =
     { errors : List Error
-    , dbUrl : String
+    , username: String
+    , password: String
     , settings : Settings
     }
 
@@ -33,7 +34,8 @@ type alias Model =
 initialModel : Settings -> Model
 initialModel settings =
     { errors = []
-    , dbUrl = ""
+    , username = ""
+    , password = ""
     , settings = settings
     }
 
@@ -62,8 +64,14 @@ viewForm =
     Html.form [ onSubmit SubmitForm ]
         [ Form.input
             [ class "form-control-lg"
-            , placeholder "db url"
-            , onInput SetDbUrl
+            , placeholder "username"
+            , onInput SetUsername
+            ]
+            []
+        , Form.input
+            [ class "form-control-lg"
+            , placeholder "password"
+            , onInput SetPassword
             ]
             []
         , button [ class "btn btn-lg btn-primary pull-xs-right" ]
@@ -77,7 +85,8 @@ viewForm =
 
 type Msg
     = SubmitForm
-    | SetDbUrl String
+    | SetUsername String
+    | SetPassword String
     | LoginCompleted (Result Http.Error Bool)
 
 
@@ -101,10 +110,18 @@ update msg model =
                         => Cmd.none
                         => NoOp
 
-        SetDbUrl dbUrl ->
+        SetUsername username ->
             { model
-                | dbUrl = dbUrl
-                , settings = Settings.setDbUrl model.settings dbUrl
+                | username = username
+                , settings = Settings.setUsername model.settings username
+            }
+                => Cmd.none
+                => NoOp
+
+        SetPassword password ->
+            { model
+                | password = password
+                , settings = Settings.setPassword model.settings password
             }
                 => Cmd.none
                 => NoOp
@@ -137,7 +154,7 @@ update msg model =
 
 type Field
     = Form
-    | Email
+    | Username
     | Password
 
 
@@ -169,7 +186,8 @@ type alias Error =
 validate : Model -> List Error
 validate =
     Validate.all
-        [ .dbUrl >> ifBlank (Email => "dbUrl can't be blank.")
+        [ .username >> ifBlank (Username => "username can't be blank.")
+        , .password >> ifBlank (Password => "password can't be blank.")
         ]
 
 

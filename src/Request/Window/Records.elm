@@ -40,12 +40,14 @@ import Util exposing ((=>))
 header : Settings -> RequestBuilder a -> RequestBuilder a
 header settings request =
     let
-        dbUrl =
-            settings.dbUrl
+        cred =
+            settings.cred
     in
-    case dbUrl of
-        Just dbUrl ->
-            HttpBuilder.withHeader "db_url" dbUrl request
+    case cred of
+        Just cred ->
+            HttpBuilder.withHeaders 
+                [("username", cred.username), ("password", cred.password)]
+                request
 
         Nothing ->
             request

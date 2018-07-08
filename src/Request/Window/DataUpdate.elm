@@ -14,6 +14,7 @@ import Http
 import HttpBuilder exposing (RequestBuilder, withExpect, withQueryParams)
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Request.Window.Records exposing (header)
 import Request.Helpers exposing (apiUrl)
 import Settings exposing (Settings)
 
@@ -30,6 +31,7 @@ updateRecord settings maybeToken tableName recordChangeset =
     apiUrl settings ("/record_changeset/" ++ tableNameToString tableName)
         |> HttpBuilder.post
         |> HttpBuilder.withJsonBody jsonBody
+        |> header settings
         |> HttpBuilder.withExpect (Http.expectJson RecordDetail.decoder)
         |> withAuthorization maybeToken
         |> HttpBuilder.toRequest
@@ -47,6 +49,7 @@ updateTab settings maybeToken tableName container =
     apiUrl settings "/tab_changeset/"
         |> HttpBuilder.post
         |> HttpBuilder.withJsonBody jsonBody
+        |> header settings
         |> HttpBuilder.withExpect (Http.expectJson Record.rowsDecoder)
         |> withAuthorization maybeToken
         |> HttpBuilder.toRequest
