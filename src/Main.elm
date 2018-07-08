@@ -317,6 +317,8 @@ setRoute maybeRoute model =
         errored =
             pageErrored model
 
+        _ = Debug.log "cred" settings.cred
+
         correctedRoute =
             if settings.loginRequired then
                 case settings.cred of
@@ -431,16 +433,21 @@ updatePage page msg model =
                 ( ( pageModel, cmd ), msgFromPage ) =
                     Login.update subMsg subModel
 
-                newModel =
+                (newModel, subCmd) =
                     case msgFromPage of
                         Login.NoOp ->
-                            model
+                            (model, Cmd.none)
 
                         Login.SetSettings settings ->
-                            { model | settings = settings }
+                            ({ model | settings = settings }
+                            , portCredentials settings
+                            )
             in
             { newModel | pageState = Loaded (Login pageModel) }
-                => Cmd.map LoginMsg cmd
+                => Cmd.batch
+                    [Cmd.map LoginMsg cmd
+                    , subCmd
+                    ]
 
         ( WindowArenaMsg subMsg, WindowArena subModel ) ->
             toPage WindowArena WindowArenaMsg (WindowArena.update session) subMsg subModel
@@ -475,6 +482,18 @@ updatePage page msg model =
             model => Cmd.none
 
 
+portCredentials: Settings -> Cmd a
+portCredentials settings =
+    case settings.cred of
+        Just cred ->
+            Cmd.batch 
+                [setUsername cred.username
+                ,setPassword cred.password
+                ]
+        Nothing ->
+            Cmd.none
+
+
 
 -- MAIN --
 
@@ -490,3 +509,7 @@ main =
 
 
 port title : String -> Cmd a
+
+port setUsername: String -> Cmd a
+
+port setPassword: String -> Cmd a

@@ -111,18 +111,22 @@ update msg model =
                         => NoOp
 
         SetUsername username ->
-            { model
+            let updatedModel ={ model
                 | username = username
                 , settings = Settings.setUsername model.settings username
             }
+            in
+                updatedModel
                 => Cmd.none
                 => NoOp
 
         SetPassword password ->
-            { model
+            let updatedModel = { model
                 | password = password
                 , settings = Settings.setPassword model.settings password
             }
+            in
+                updatedModel
                 => Cmd.none
                 => NoOp
 
@@ -131,14 +135,15 @@ update msg model =
                 errorMessages =
                     case error of
                         Http.BadStatus response ->
+                            let _ = Debug.log "Its a bad status"
+                            in
                             response.body
-                                |> decodeString (field "errors" errorsDecoder)
-                                |> Result.withDefault []
+
 
                         _ ->
-                            [ "unable to process registration" ]
+                            "unable to process registration"
             in
-            { model | errors = List.map (\errorMessage -> Form => errorMessage) errorMessages }
+            { model | errors = [Form => errorMessages] }
                 => Cmd.none
                 => NoOp
 

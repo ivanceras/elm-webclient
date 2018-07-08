@@ -1054,8 +1054,10 @@ update msg model =
             let
                 updatedModel =
                     { model | containerScroll = scroll }
+                (updatedModel2, subCmd2) = updateDropdownDisplay (DropdownDisplay.ContainerScrollChanged scroll) updatedModel
+                (updatedModel3, subCmd3) = updateFixDropdown (FixDropdown.ContainerScrollChanged scroll) updatedModel2
             in
-            updateDropdownDisplay (DropdownDisplay.ContainerScrollChanged scroll) updatedModel
+                updatedModel3 => Cmd.batch [subCmd2, subCmd3]
 
         LookupChanged lookup ->
             { model | lookup = lookup }
@@ -1081,6 +1083,21 @@ updateDropdownDisplay dropdownMsg model =
             { model | widget = TableDropdown updatedDropdown }
                 => Cmd.map (DropdownDisplayMsg updatedDropdown) subCmd
 
+
+        _ ->
+            model => Cmd.none
+
+
+updateFixDropdown : FixDropdown.Msg -> Model -> ( Model, Cmd Msg )
+updateFixDropdown dropdownMsg model =
+    case model.widget of
+        FixDropdown dropdown ->
+            let
+                ( updatedDropdown, subCmd ) =
+                    FixDropdown.update dropdownMsg dropdown
+            in
+            { model | widget = FixDropdown updatedDropdown }
+                => Cmd.map (FixDropdownMsg updatedDropdown) subCmd
         _ ->
             model => Cmd.none
 

@@ -6,6 +6,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Util exposing ((=>), Scroll, onScroll, px, viewIf)
+import Vendor
 
 
 type alias Model =
@@ -14,6 +15,7 @@ type alias Model =
     , selected : Maybe String
     , alignment : Alignment
     , width : Int
+    , containerScroll : Scroll
     }
 
 
@@ -24,6 +26,7 @@ init alignment width selected list =
     , selected = selected
     , alignment = alignment
     , width = width
+    , containerScroll = Scroll 0 0
     }
 
 
@@ -39,10 +42,25 @@ view model =
         widgetWidth =
             model.width
 
+        padTop =
+            2
+
+        ( marginTop, marginLeft ) =
+            case Vendor.prefix of
+                Vendor.Webkit ->
+                    ( -model.containerScroll.top + padTop
+                    , -model.containerScroll.left
+                    )
+
+                _ ->
+                    ( padTop, 0 )
+
         styles =
             style
                 [ ( "text-align", alignmentString )
                 , ( "width", px widgetWidth )
+                , ( "margin-top", px marginTop )
+                , ( "margin-left", px marginLeft )
                 ]
     in
     div []
@@ -122,6 +140,7 @@ type Msg
     = ToggleDropdown
     | CloseDropdown
     | SelectionChanged String
+    | ContainerScrollChanged Scroll
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -141,3 +160,10 @@ update msg model =
                     { model | selected = Just selected }
             in
             update CloseDropdown newModel
+
+        ContainerScrollChanged scroll ->
+            { model
+                | containerScroll = scroll
+                , opened = False --close the dropdown when scrolled
+            }
+                => Cmd.none
