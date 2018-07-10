@@ -22,6 +22,7 @@ import Data.Window.TableName as TableName exposing (TableName)
 import Data.WindowArena as WindowArena exposing (Action(..), ArenaArg)
 import Html exposing (..)
 import Html.Attributes exposing (class, classList, id, style)
+import Html.Events exposing (onClick)
 import Http
 import Ionicon
 import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
@@ -58,6 +59,7 @@ type alias Model =
     , loadingSelectedRecord : Bool
     , isDetailedRecordMaximized : Bool
     , containerSize : Size
+    , isWindowListHidden : Bool
     }
 
 
@@ -87,7 +89,7 @@ init settings session arenaArg containerSize =
         loadWindow =
             case tableName of
                 Just tableName ->
-                    Request.Window.get settings maybeAuthToken tableName
+                    Request.Window.get settings tableName
                         |> Http.toTask
                         |> Task.map Just
                         |> Task.mapError handleLoadError
@@ -102,7 +104,7 @@ init settings session arenaArg containerSize =
                         (\window ->
                             case window of
                                 Just window ->
-                                    Window.init settings session tableName window arenaArg (calcWindowSize containerSize)
+                                    Window.init settings session tableName window arenaArg (calcWindowSize containerSize False)
                                         |> Task.map Just
                                         |> Task.mapError handleLoadError
 
@@ -115,7 +117,7 @@ init settings session arenaArg containerSize =
                     Task.succeed Nothing
 
         loadWindowList =
-            GroupedWindow.init settings session tableName
+            GroupedWindow.init settings tableName
                 |> Task.mapError handleLoadError
 
         _ =
@@ -134,7 +136,7 @@ init settings session arenaArg containerSize =
 
                                         _ ->
                                             -- For Copy, Select, and New
-                                            DetailedRecord.init isDetailedRecordMaximized settings tableName arenaArg.action arenaArg window (calcDetailedRecordSize containerSize)
+                                            DetailedRecord.init isDetailedRecordMaximized settings tableName arenaArg.action arenaArg window (calcDetailedRecordSize containerSize False)
                                                 |> Task.map Just
                                                 |> Task.mapError handleLoadError
 
@@ -157,6 +159,7 @@ init settings session arenaArg containerSize =
             , loadingSelectedRecord = False
             , isDetailedRecordMaximized = isDetailedRecordMaximized
             , containerSize = containerSize
+            , isWindowListHidden = False
             }
         )
         loadActiveWindow
@@ -188,12 +191,11 @@ view session model =
     in
     div [ class "window" ]
         [ viewBanner model
+        , button [ class "sidebar-control", onClick ToggleWindowList ] [ text "<<" ]
         , div [ class "window-content" ]
             [ div [ class "pane-group" ]
-                [ div [ class "pane pane-sm sidebar grouped-window-list" ]
-                    [ GroupedWindow.view model.groupedWindow
-                        |> Html.map GroupedWindowMsg
-                    ]
+                [ GroupedWindow.view model.groupedWindow
+                    |> Html.map GroupedWindowMsg
                 , div [ class "pane window-arena" ]
                     [ div [ class "tab-names" ]
                         [ viewTabNames model ]
@@ -324,6 +326,7 @@ type Msg
     | BrowserResized Size
     | InitializedSelectedRow ( DetailedRecord.Model, Maybe RecordId )
     | FailedToInitializeSelectedRow
+    | ToggleWindowList
 
 
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
@@ -339,7 +342,7 @@ update session msg model =
         GroupedWindowMsg subMsg ->
             let
                 ( newFeed, subCmd ) =
-                    GroupedWindow.update session subMsg model.groupedWindow
+                    GroupedWindow.update subMsg model.groupedWindow
             in
             { model | groupedWindow = newFeed } => Cmd.map GroupedWindowMsg subCmd
 
@@ -363,7 +366,7 @@ update session msg model =
                     { arenaArg | action = Copy recordIdString }
 
                 initSelectedRow =
-                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName (Copy recordIdString) copyArenaArg activeWindow (calcDetailedRecordSize model.containerSize)
+                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName (Copy recordIdString) copyArenaArg activeWindow (calcDetailedRecordSize model.containerSize model.isWindowListHidden)
 
                 initSelectedRowTask =
                     Task.attempt
@@ -397,7 +400,7 @@ update session msg model =
                             Debug.crash "There should be an activeWindow"
 
                 initSelectedRow =
-                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName arenaArg.action arenaArg activeWindow (calcDetailedRecordSize model.containerSize)
+                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName arenaArg.action arenaArg activeWindow (calcDetailedRecordSize model.containerSize model.isWindowListHidden)
 
                 initSelectedRowTask =
                     Task.attempt
@@ -425,7 +428,7 @@ update session msg model =
                             Debug.crash "There should be an activeWindow"
 
                 initSelectedRow =
-                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName arenaArg.action arenaArg activeWindow (calcDetailedRecordSize model.containerSize)
+                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName arenaArg.action arenaArg activeWindow (calcDetailedRecordSize model.containerSize model.isWindowListHidden)
 
                 initSelectedRowTask =
                     Task.attempt
@@ -478,7 +481,7 @@ update session msg model =
                     { arenaArg | action = NewRecord InCard }
 
                 initSelectedRow =
-                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName (NewRecord InCard) newArenaArg activeWindow (calcDetailedRecordSize model.containerSize)
+                    DetailedRecord.init isDetailedRecordMaximized model.settings tableName (NewRecord InCard) newArenaArg activeWindow (calcDetailedRecordSize model.containerSize model.isWindowListHidden)
 
                 initNewRecordTask =
                     Task.attempt
@@ -607,10 +610,35 @@ update session msg model =
             in
             updatedModel3 => Cmd.batch [ subCmd2, subCmd2 ]
 
+        ToggleWindowList ->
+            let
+                updatedModel =
+                    { model | isWindowListHidden = not model.isWindowListHidden }
+
+                isHidden =
+                    updatedModel.isWindowListHidden
+
+                groupedWindow =
+                    model.groupedWindow
+
+                ( updatedGroupedWindow, _ ) =
+                    GroupedWindow.update (GroupedWindow.SetVisibility isHidden) groupedWindow
+
+                updatedModel2 =
+                    { updatedModel | groupedWindow = updatedGroupedWindow }
+
+                ( updatedModel3, subCmd3 ) =
+                    updateActiveWindowSize updatedModel2
+
+                ( updatedModel4, subCmd4 ) =
+                    updateDetailedRecordSize updatedModel3
+            in
+            updatedModel4 => Cmd.batch [ subCmd3, subCmd4 ]
+
 
 updateDetailedRecordSize : Model -> ( Model, Cmd Msg )
 updateDetailedRecordSize model =
-    updateSelectedRow (DetailedRecord.ContainerSizeChanged (calcDetailedRecordSize model.containerSize)) model
+    updateSelectedRow (DetailedRecord.ContainerSizeChanged (calcDetailedRecordSize model.containerSize model.isWindowListHidden)) model
 
 
 updateSelectedRow : DetailedRecord.Msg -> Model -> ( Model, Cmd Msg )
@@ -630,27 +658,33 @@ updateSelectedRow detailMsg model =
         => subCmd
 
 
-calcWindowSize : Size -> Size
-calcWindowSize containerSize =
+calcWindowSize : Size -> Bool -> Size
+calcWindowSize containerSize isWindowListHidden =
     let
         heightDeductions =
             Constant.bannerHeight + Constant.tabNameHeight
+
+        widthDeductions =
+            if isWindowListHidden then
+                0
+            else
+                Constant.sidebarWidth
     in
-    { width = containerSize.width - Constant.sidebarWidth
+    { width = containerSize.width - widthDeductions
     , height = containerSize.height - heightDeductions
     }
 
 
-calcDetailedRecordSize : Size -> Size
-calcDetailedRecordSize containerSize =
-    calcWindowSize containerSize
+calcDetailedRecordSize : Size -> Bool -> Size
+calcDetailedRecordSize containerSize isWindowListHidden =
+    calcWindowSize containerSize isWindowListHidden
 
 
 updateActiveWindowSize : Model -> ( Model, Cmd Msg )
 updateActiveWindowSize model =
     let
         windowSize =
-            calcWindowSize model.containerSize
+            calcWindowSize model.containerSize model.isWindowListHidden
     in
     updateActiveWindow (Window.ContainerSizeChanged windowSize) model
 

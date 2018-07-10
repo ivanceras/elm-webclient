@@ -1,7 +1,7 @@
 module Views.Window.GroupedWindow
     exposing
         ( Model
-        , Msg
+        , Msg(..)
         , init
         , update
         , view
@@ -57,11 +57,12 @@ type alias Model =
     , activeWindow : Maybe TableName
     , isLoading : Bool
     , windowSearch : Maybe String
+    , isHidden : Bool
     }
 
 
-init : Settings -> Session -> Maybe TableName -> Task Http.Error Model
-init settings session activeWindow =
+init : Settings -> Maybe TableName -> Task Http.Error Model
+init settings activeWindow =
     let
         toModel ( activeWindow, groupedWindow ) =
             { errors = []
@@ -70,9 +71,10 @@ init settings session activeWindow =
             , filteredWindow = groupedWindow
             , isLoading = False
             , windowSearch = Nothing
+            , isHidden = False
             }
     in
-    fetch settings (Maybe.map .token session.user) activeWindow
+    fetch settings activeWindow
         |> Task.map toModel
 
 
@@ -82,10 +84,15 @@ init settings session activeWindow =
 
 view : Model -> Html Msg
 view model =
-    div [ class "grouped-window" ]
-        (textSearch model
-            :: viewWindowNames model
-        )
+    div
+        [ class "pane pane-sm sidebar grouped-window-list animated"
+        , classList [ ( "hide", model.isHidden ) ]
+        ]
+        [ div [ class "grouped-window" ]
+            (textSearch model
+                :: viewWindowNames model
+            )
+        ]
 
 
 textSearch : Model -> Html Msg
@@ -177,10 +184,11 @@ viewWindowNames model =
 type Msg
     = DismissErrors
     | SearchValueChanged String
+    | SetVisibility Bool
 
 
-update : Session -> Msg -> Model -> ( Model, Cmd Msg )
-update session msg model =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
     case msg of
         DismissErrors ->
             { model | errors = [] } => Cmd.none
@@ -201,6 +209,10 @@ update session msg model =
             updateWindowSearch updatedModel
                 => Cmd.none
 
+        SetVisibility isHidden ->
+            { model | isHidden = isHidden }
+                => Cmd.none
+
 
 updateWindowSearch : Model -> Model
 updateWindowSearch model =
@@ -218,8 +230,8 @@ updateWindowSearch model =
     }
 
 
-fetch : Settings -> Maybe AuthToken -> Maybe TableName -> Task Http.Error ( Maybe TableName, List GroupedWindow )
-fetch settings token activeWindow =
-    Request.Window.list settings token
+fetch : Settings -> Maybe TableName -> Task Http.Error ( Maybe TableName, List GroupedWindow )
+fetch settings activeWindow =
+    Request.Window.list settings
         |> Http.toTask
         |> Task.map (\groupedWindow -> ( activeWindow, groupedWindow ))

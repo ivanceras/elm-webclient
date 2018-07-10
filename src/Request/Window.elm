@@ -23,8 +23,8 @@ import Settings exposing (Settings)
 import Util exposing ((=>))
 
 
-get : Settings -> Maybe AuthToken -> TableName -> Http.Request Window
-get settings maybeToken tableName =
+get : Settings -> TableName -> Http.Request Window
+get settings tableName =
     let
         expect =
             Window.baseWindowDecoder
@@ -34,12 +34,11 @@ get settings maybeToken tableName =
         |> HttpBuilder.get
         |> header settings
         |> HttpBuilder.withExpect expect
-        |> withAuthorization maybeToken
         |> HttpBuilder.toRequest
 
 
-list : Settings -> Maybe AuthToken -> Http.Request (List GroupedWindow)
-list settings maybeToken =
+list : Settings -> Http.Request (List GroupedWindow)
+list settings =
     let
         expect =
             GroupedWindow.decoder
@@ -50,5 +49,4 @@ list settings maybeToken =
         |> HttpBuilder.get
         |> header settings
         |> HttpBuilder.withExpect expect
-        |> withAuthorization maybeToken
         |> HttpBuilder.toRequest
