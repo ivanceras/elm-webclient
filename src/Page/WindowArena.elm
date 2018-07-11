@@ -104,7 +104,7 @@ init settings session arenaArg containerSize =
                         (\window ->
                             case window of
                                 Just window ->
-                                    Window.init settings session tableName window arenaArg (calcWindowSize containerSize False)
+                                    Window.init settings session tableName window arenaArg (calcWindowSize containerSize settings.isWindowListHidden)
                                         |> Task.map Just
                                         |> Task.mapError handleLoadError
 
@@ -136,7 +136,7 @@ init settings session arenaArg containerSize =
 
                                         _ ->
                                             -- For Copy, Select, and New
-                                            DetailedRecord.init isDetailedRecordMaximized settings tableName arenaArg.action arenaArg window (calcDetailedRecordSize containerSize False)
+                                            DetailedRecord.init isDetailedRecordMaximized settings tableName arenaArg.action arenaArg window (calcDetailedRecordSize containerSize settings.isWindowListHidden)
                                                 |> Task.map Just
                                                 |> Task.mapError handleLoadError
 
@@ -159,7 +159,7 @@ init settings session arenaArg containerSize =
             , loadingSelectedRecord = False
             , isDetailedRecordMaximized = isDetailedRecordMaximized
             , containerSize = containerSize
-            , isWindowListHidden = False
+            , isWindowListHidden = settings.isWindowListHidden
             }
         )
         loadActiveWindow
@@ -191,7 +191,7 @@ view session model =
     in
     div [ class "window" ]
         [ viewBanner model
-        , button [ class "sidebar-control", onClick ToggleWindowList ] [ text "<<" ]
+        , button [ class "sidebar-control", onClick (ToggleWindowList (not model.isWindowListHidden)) ] [ text "<<" ]
         , div [ class "window-content" ]
             [ div [ class "pane-group" ]
                 [ GroupedWindow.view model.groupedWindow
@@ -326,7 +326,8 @@ type Msg
     | BrowserResized Size
     | InitializedSelectedRow ( DetailedRecord.Model, Maybe RecordId )
     | FailedToInitializeSelectedRow
-    | ToggleWindowList
+    | ToggleWindowList Bool
+    | SetSettings Settings
 
 
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
@@ -610,13 +611,10 @@ update session msg model =
             in
             updatedModel3 => Cmd.batch [ subCmd2, subCmd2 ]
 
-        ToggleWindowList ->
+        ToggleWindowList isHidden ->
             let
                 updatedModel =
-                    { model | isWindowListHidden = not model.isWindowListHidden }
-
-                isHidden =
-                    updatedModel.isWindowListHidden
+                    { model | isWindowListHidden = isHidden }
 
                 groupedWindow =
                     model.groupedWindow
@@ -634,6 +632,14 @@ update session msg model =
                     updateDetailedRecordSize updatedModel3
             in
             updatedModel4 => Cmd.batch [ subCmd3, subCmd4 ]
+
+        SetSettings settings ->
+            let
+                _ =
+                    Debug.log "window arena settings " settings
+            in
+            { model | settings = settings }
+                => Cmd.none
 
 
 updateDetailedRecordSize : Model -> ( Model, Cmd Msg )

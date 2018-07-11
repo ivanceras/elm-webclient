@@ -71,7 +71,7 @@ init settings activeWindow =
             , filteredWindow = groupedWindow
             , isLoading = False
             , windowSearch = Nothing
-            , isHidden = False
+            , isHidden = settings.isWindowListHidden
             }
     in
     fetch settings activeWindow

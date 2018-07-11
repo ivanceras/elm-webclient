@@ -1,12 +1,12 @@
 function init(){
     var username = null;
     var password = null;
+    var windowListIsHidden = false;
     var hasStorage = storageAvailable('localStorage');
     if (hasStorage){
         username = localStorage.getItem('username');
         password = localStorage.getItem('password');
-        console.log("username:", username);
-        console.log("password:", password);
+        windowListIsHidden = localStorage.getItem('is_window_list_hidden') || false;
     }
     else{
         console.error("localStorage is not supported");
@@ -20,7 +20,8 @@ function init(){
           db_name: null,
           api_endpoint: null,
           grouped: true,
-          cred: cred 
+          cred: cred,
+          is_window_list_hidden: windowListIsHidden  
         }
     );
 
@@ -39,6 +40,15 @@ function init(){
     app.ports.setPassword.subscribe(function(password) {
         if (hasStorage){
             localStorage.setItem('password', password);
+        }
+        else{
+            console.error("localStorage is not supported");
+        }
+    });
+
+    app.ports.setWindowListIsHidden.subscribe(function(isHidden) {
+        if (hasStorage){
+            localStorage.setItem('is_window_list_hidden', isHidden);
         }
         else{
             console.error("localStorage is not supported");

@@ -317,7 +317,8 @@ setRoute maybeRoute model =
         errored =
             pageErrored model
 
-        _ = Debug.log "cred" settings.cred
+        _ =
+            Debug.log "cred" settings.cred
 
         correctedRoute =
             if settings.loginRequired then
@@ -433,21 +434,50 @@ updatePage page msg model =
                 ( ( pageModel, cmd ), msgFromPage ) =
                     Login.update subMsg subModel
 
-                (newModel, subCmd) =
+                ( newModel, subCmd ) =
                     case msgFromPage of
                         Login.NoOp ->
-                            (model, Cmd.none)
+                            ( model, Cmd.none )
 
                         Login.SetSettings settings ->
-                            ({ model | settings = settings }
+                            ( { model | settings = settings }
                             , portCredentials settings
                             )
             in
             { newModel | pageState = Loaded (Login pageModel) }
                 => Cmd.batch
-                    [Cmd.map LoginMsg cmd
+                    [ Cmd.map LoginMsg cmd
                     , subCmd
                     ]
+
+        ( WindowArenaMsg (WindowArena.ToggleWindowList isWindowListHidden), WindowArena subModel ) ->
+            let
+                updatedSettings =
+                    model.settings
+
+                updatedModel =
+                    { model
+                        | settings = { updatedSettings | isWindowListHidden = isWindowListHidden }
+                    }
+
+                subMsg =
+                    WindowArena.ToggleWindowList isWindowListHidden
+
+                _ =
+                    Debug.log "updated model settings: " updatedModel.settings
+
+                ( updatedWindowArena, subCmd ) =
+                    WindowArena.update session (WindowArena.SetSettings updatedModel.settings) subModel
+
+                ( updatedWindowArena2, newCmd ) =
+                    WindowArena.update session subMsg updatedWindowArena
+            in
+            ( { model | pageState = Loaded (WindowArena updatedWindowArena2) }
+            , Cmd.batch
+                [ Cmd.map WindowArenaMsg newCmd
+                , setWindowListIsHidden updatedModel.settings.isWindowListHidden
+                ]
+            )
 
         ( WindowArenaMsg subMsg, WindowArena subModel ) ->
             toPage WindowArena WindowArenaMsg (WindowArena.update session) subMsg subModel
@@ -455,7 +485,8 @@ updatePage page msg model =
         ( SetLoginRequired isRequired, _ ) ->
             let
                 updatedModel =
-                    { model | settings = Settings.setDbUrl model.settings isRequired
+                    { model
+                        | settings = Settings.setDbUrl model.settings isRequired
                     }
             in
             setRoute (Route.fromLocation updatedModel.location) updatedModel
@@ -482,14 +513,15 @@ updatePage page msg model =
             model => Cmd.none
 
 
-portCredentials: Settings -> Cmd a
+portCredentials : Settings -> Cmd a
 portCredentials settings =
     case settings.cred of
         Just cred ->
-            Cmd.batch 
-                [setUsername cred.username
-                ,setPassword cred.password
+            Cmd.batch
+                [ setUsername cred.username
+                , setPassword cred.password
                 ]
+
         Nothing ->
             Cmd.none
 
@@ -510,6 +542,11 @@ main =
 
 port title : String -> Cmd a
 
-port setUsername: String -> Cmd a
 
-port setPassword: String -> Cmd a
+port setUsername : String -> Cmd a
+
+
+port setPassword : String -> Cmd a
+
+
+port setWindowListIsHidden : Bool -> Cmd a

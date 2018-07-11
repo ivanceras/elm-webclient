@@ -1,10 +1,9 @@
-module Settings exposing (Settings, decoder, fromJson, setDbName, setDbUrl, setUsername, setPassword)
+module Settings exposing (Settings, decoder, fromJson, setDbName, setDbUrl, setPassword, setUsername)
 
 import Data.DatabaseName as DatabaseName exposing (DatabaseName)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Extra
-import Json.Decode.Pipeline as Pipeline exposing (custom, decode, required, optional)
-
+import Json.Decode.Pipeline as Pipeline exposing (custom, decode, optional, required)
 
 
 type alias Settings =
@@ -12,18 +11,21 @@ type alias Settings =
     , dbName : Maybe DatabaseName
     , apiEndPoint : Maybe String
     , grouped : Bool
-    , cred: Maybe Cred
+    , cred : Maybe Cred
+    , isWindowListHidden : Bool
     }
 
-type alias Cred = 
-    { username: String
-    , password: String
+
+type alias Cred =
+    { username : String
+    , password : String
     }
 
 
 setDbUrl : Settings -> Bool -> Settings
 setDbUrl settings loginRequired =
     { settings | loginRequired = loginRequired }
+
 
 credDecoder : Decoder Cred
 credDecoder =
@@ -36,27 +38,35 @@ setDbName : Settings -> Maybe DatabaseName -> Settings
 setDbName settings dbName =
     { settings | dbName = dbName }
 
-setUsername: Settings -> String -> Settings
+
+setUsername : Settings -> String -> Settings
 setUsername settings username =
-    let cred = case settings.cred of
-        Just cred ->
-            { cred | username = username }
-        Nothing ->
-            { username = username
-            , password = ""
-            }
+    let
+        cred =
+            case settings.cred of
+                Just cred ->
+                    { cred | username = username }
+
+                Nothing ->
+                    { username = username
+                    , password = ""
+                    }
     in
     { settings | cred = Just cred }
 
-setPassword: Settings -> String -> Settings
+
+setPassword : Settings -> String -> Settings
 setPassword settings password =
-    let cred = case settings.cred of
-        Just cred ->
-            { cred | password = password }
-        Nothing ->
-            { username = ""
-            , password = password
-            }
+    let
+        cred =
+            case settings.cred of
+                Just cred ->
+                    { cred | password = password }
+
+                Nothing ->
+                    { username = ""
+                    , password = password
+                    }
     in
     { settings | cred = Just cred }
 
@@ -69,6 +79,7 @@ decoder =
         |> required "api_endpoint" (Decode.nullable Decode.string)
         |> required "grouped" Decode.bool
         |> optional "cred" (Decode.nullable credDecoder) Nothing
+        |> required "is_window_list_hidden" Decode.bool
 
 
 fromJson : Value -> Settings
@@ -82,4 +93,4 @@ fromJson json =
             settings
 
         Err e ->
-            Debug.crash "Decoding settings should not be error" e
+            Debug.crash ("Decoding settings should not be error: " ++ e)
