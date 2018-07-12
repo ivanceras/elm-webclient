@@ -6,7 +6,7 @@ function init(){
     if (hasStorage){
         username = localStorage.getItem('username');
         password = localStorage.getItem('password');
-        windowListIsHidden = localStorage.getItem('is_window_list_hidden') || false;
+        windowListIsHidden = JSON.parse(localStorage.getItem('is_window_list_hidden')) || false;
     }
     else{
         console.error("localStorage is not supported");
@@ -48,7 +48,7 @@ function init(){
 
     app.ports.setWindowListIsHidden.subscribe(function(isHidden) {
         if (hasStorage){
-            localStorage.setItem('is_window_list_hidden', isHidden);
+            localStorage.setItem('is_window_list_hidden', JSON.stringify(isHidden));
         }
         else{
             console.error("localStorage is not supported");
