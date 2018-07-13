@@ -153,12 +153,10 @@ view list model =
                 , ( "width", px widgetWidth )
                 ]
     in
-    div [ class "dropdown-display-wrapper" ]
-        [ div [ class "dropdown-display" ]
-            [ viewInputButton styles list model
-            , viewDropdown styles list model
-                |> viewIf model.opened
-            ]
+    div [ class "dropdown-display" ]
+        [ viewInputButton styles list model
+        , viewDropdown styles list model
+            |> viewIf model.opened
         ]
 
 
@@ -250,14 +248,9 @@ viewDropdown styles list model =
             2
 
         ( marginTop, marginLeft ) =
-            case Vendor.prefix of
-                Vendor.Webkit ->
-                    ( -model.containerScroll.top + padTop
-                    , -model.containerScroll.left
-                    )
-
-                _ ->
-                    ( padTop, 0 )
+            ( -model.containerScroll.top + padTop
+            , -model.containerScroll.left
+            )
     in
     div
         [ class "dropdown-select"

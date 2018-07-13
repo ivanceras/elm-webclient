@@ -687,13 +687,6 @@ button.sidebar-control {
  * TODO: when adding overflow:auto the scrolling and the items are not overlapped,
  *  however the dropdown will be shown bellow overlapped by the details as well.
  */
-.dropdown-display-wrapper{
-    position: relative;
-    display: inline-block;
-}
-.dropdown-display {
-    position: relative;
-}
 
 .dropdown-select {
     position: absolute;

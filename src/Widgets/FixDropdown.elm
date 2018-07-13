@@ -42,25 +42,10 @@ view model =
         widgetWidth =
             model.width - 10
 
-        padTop =
-            2
-
-        ( marginTop, marginLeft ) =
-            case Vendor.prefix of
-                Vendor.Webkit ->
-                    ( -model.containerScroll.top + padTop
-                    , -model.containerScroll.left
-                    )
-
-                _ ->
-                    ( padTop, 0 )
-
         styles =
             style
                 [ ( "text-align", alignmentString )
                 , ( "width", px widgetWidth )
-                , ( "margin-top", px marginTop )
-                , ( "margin-left", px marginLeft )
                 ]
     in
     div []
@@ -115,10 +100,22 @@ viewDropdown styles model =
     let
         sorted =
             List.sortBy String.toLower model.list
+
+        padTop =
+            2
+
+        ( marginTop, marginLeft ) =
+            ( -model.containerScroll.top + padTop
+            , -model.containerScroll.left
+            )
     in
     div
         [ class "dropdown-select"
         , styles
+        , style
+            [ ( "margin-top", px marginTop )
+            , ( "margin-left", px marginLeft )
+            ]
         ]
         [ div [ class "dropdown-options" ]
             (List.map viewOption sorted)
