@@ -1106,7 +1106,6 @@ button.sidebar-control {
 .detailed-selected-row {
     position: absolute;
     background-color: #f5f5f4;
-    right: 10px;
 }
 
 .detailed-selected-row--shadow{

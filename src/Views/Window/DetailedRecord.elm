@@ -719,10 +719,16 @@ view model =
 
         containerHeight =
             allotedHeight + 40
+
+        containerWidth =
+            allotedWidth + 40
     in
     div
         [ class "detailed-selected-row animated fadeInDown"
-        , style [ ( "height", px <| containerHeight ) ]
+        , style
+            [ ( "height", px containerHeight )
+            , ( "width", px containerWidth )
+            ]
         , Constant.detailedSelectedRowStyle
             |> styleIf (not isMaximized)
 
