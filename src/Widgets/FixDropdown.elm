@@ -40,7 +40,7 @@ view model =
             Widget.alignmentToString alignment
 
         widgetWidth =
-            model.width
+            model.width - 10
 
         padTop =
             2
