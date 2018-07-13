@@ -290,6 +290,7 @@ viewBanner model =
     div
         [ class "banner"
         , id "banner"
+        , classList [ ( "hide", model.isWindowListHidden ) ]
         ]
         [ div [ class "head" ]
             [ h3 [ class "logo-font" ] [ text dbName ]

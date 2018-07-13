@@ -128,10 +128,16 @@ textarea {
 #banner{
     height: 100px;
     display: flex;
+    -webkit-transition: height .2s ease-in-out;
+    -webkit-animation-fill-mode: both;
 }
 
 #banner .head{
     padding-left: 10px;
+}
+
+#banner.hide{
+    height: 0px!important
 }
 
 .row-value {
@@ -566,12 +572,10 @@ a.primary-link {
 
 button.sidebar-control {
     width: 40px;
-    height: 30px;
     margin: 0;
     padding: 0;
     border: 0;
     background: transparent;
-}
 }
 
 .main-tab-selected {
