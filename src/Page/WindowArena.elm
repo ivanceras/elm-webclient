@@ -668,8 +668,14 @@ updateSelectedRow detailMsg model =
 calcWindowSize : Size -> Bool -> Size
 calcWindowSize containerSize isWindowListHidden =
     let
+        bannerHeightDeduction =
+            if isWindowListHidden then
+                0
+            else
+                Constant.bannerHeight
+
         heightDeductions =
-            Constant.bannerHeight + Constant.tabNameHeight
+            bannerHeightDeduction + Constant.tabNameHeight
 
         widthDeductions =
             if isWindowListHidden then

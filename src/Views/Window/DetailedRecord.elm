@@ -631,10 +631,10 @@ splitTabHeights : Window -> Position -> Bool -> BrowserWindow.Size -> ( Float, F
 splitTabHeights window position isMaximized containerSize =
     let
         cardToolbar =
-            90
+            60
 
         detailToolbar =
-            90
+            60
 
         detailTabNamesHeight =
             40
@@ -721,7 +721,7 @@ view model =
             allotedHeight + 40
 
         containerWidth =
-            allotedWidth + 40
+            allotedWidth + 50
     in
     div
         [ class "detailed-selected-row animated fadeInDown"
@@ -979,12 +979,14 @@ viewDetailTabs model =
 
         ( allotedWidth, allotedHeight ) =
             detailAllotedSize model
+
+        adjustedWidth = allotedWidth + 50
     in
     if List.length detailTabs > 0 then
         div []
             [ div
                 [ class "detail-tab-names-container"
-                , style [ ( "width", px (allotedWidth + 100) ) ]
+                , style [ ( "width", px adjustedWidth  ) ]
                 ]
                 [ div [ class "detail-tab-names" ]
                     (List.map

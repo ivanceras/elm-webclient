@@ -79,13 +79,13 @@ calcMainTabSize containerSize =
             ( toFloat containerSize.width, toFloat containerSize.height )
 
         toolbarHeight =
-            90.0
+            60
 
         tabColumnHeights =
             70
 
         sideMargins =
-            60
+            40
 
         marginBottom =
             60
