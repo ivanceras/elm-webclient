@@ -80,7 +80,12 @@ tableColumn field tableName columnName =
         columnName1 =
             firstColumnName field
     in
-    columnName1.name ++ "." ++ tableName.name ++ "." ++ columnName.name
+    case columnName1 of
+        Just columnName1 ->
+            columnName1.name ++ "." ++ tableName.name ++ "." ++ columnName.name
+
+        Nothing ->
+            tableName.name ++ "." ++ columnName.name
 
 
 {-| Get a the dropdown record value
@@ -141,19 +146,19 @@ type ColumnDetail
     | Compound (List ( ColumnName, DataType ))
 
 
-dataType : Field -> DataType
+dataType : Field -> Maybe DataType
 dataType field =
     case field.columnDetail of
         Simple ( columnName, dataType ) ->
-            dataType
+            Just dataType
 
         Compound dataTypes ->
             case List.head dataTypes of
                 Just ( columnName, dataType ) ->
-                    dataType
+                    Just dataType
 
                 Nothing ->
-                    Debug.crash "Compound must have data type"
+                    Nothing
 
 
 fieldDataTypes : Field -> List DataType
@@ -164,23 +169,28 @@ fieldDataTypes field =
 cast : String -> Field -> Value
 cast value field =
     case dataType field of
-        DataType.Text ->
-            Value.Text value
+        Just dt ->
+            case dt of
+                DataType.Text ->
+                    Value.Text value
 
-        DataType.Int ->
-            Value.Int (forceInt value)
+                DataType.Int ->
+                    Value.Int (forceInt value)
 
-        DataType.Smallint ->
-            Value.Smallint (forceInt value)
+                DataType.Smallint ->
+                    Value.Smallint (forceInt value)
 
-        DataType.Tinyint ->
-            Value.Tinyint (forceInt value)
+                DataType.Tinyint ->
+                    Value.Tinyint (forceInt value)
 
-        DataType.Uuid ->
-            Value.Uuid value
+                DataType.Uuid ->
+                    Value.Uuid value
 
-        _ ->
-            Debug.crash ("unhandled casting of dataType " ++ toString dataType)
+                _ ->
+                    Debug.crash ("unhandled casting of dataType " ++ toString dataType)
+
+        Nothing ->
+            Value.Nil
 
 
 forceInt : String -> Int
@@ -207,11 +217,11 @@ columnDataTypes detail =
                 listColumnDataType
 
 
-firstColumnName : Field -> ColumnName
+firstColumnName : Field -> Maybe ColumnName
 firstColumnName field =
     case field.columnDetail of
         Simple ( columnName, _ ) ->
-            columnName
+            Just columnName
 
         Compound detailList ->
             let
@@ -225,10 +235,10 @@ firstColumnName field =
             in
             case columnName of
                 Just columnName ->
-                    columnName
+                    Just columnName
 
                 Nothing ->
-                    Debug.crash "This is unreachable!"
+                    Nothing
 
 
 columnName : Field -> String
@@ -295,16 +305,21 @@ widgetCharacterWidth field =
 
         charWidth =
             case dataType field of
-                DataType.Date ->
-                    dateWidth
+                Just dt ->
+                    case dt of
+                        DataType.Date ->
+                            dateWidth
 
-                DataType.Timestamp ->
-                    dateWidth
+                        DataType.Timestamp ->
+                            dateWidth
 
-                DataType.TimestampTz ->
-                    dateWidth
+                        DataType.TimestampTz ->
+                            dateWidth
 
-                _ ->
+                        _ ->
+                            max columnLen field.controlWidget.width
+
+                Nothing ->
                     max columnLen field.controlWidget.width
     in
     charWidth

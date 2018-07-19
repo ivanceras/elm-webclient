@@ -872,39 +872,44 @@ update msg model =
 
                 value =
                     case dataType of
-                        DataType.Tinyint ->
-                            case intValue of
-                                Ok f ->
-                                    Value.Int f
+                        Just dt ->
+                            case dt of
+                                DataType.Tinyint ->
+                                    case intValue of
+                                        Ok f ->
+                                            Value.Int f
 
-                                Err e ->
+                                        Err e ->
+                                            Value.Nil
+
+                                DataType.Smallint ->
+                                    case intValue of
+                                        Ok f ->
+                                            Value.Int f
+
+                                        Err e ->
+                                            Value.Nil
+
+                                DataType.Int ->
+                                    case intValue of
+                                        Ok f ->
+                                            Value.Int f
+
+                                        Err e ->
+                                            Value.Nil
+
+                                DataType.Bigint ->
+                                    case intValue of
+                                        Ok f ->
+                                            Value.Int f
+
+                                        Err e ->
+                                            Value.Nil
+
+                                _ ->
                                     Value.Nil
 
-                        DataType.Smallint ->
-                            case intValue of
-                                Ok f ->
-                                    Value.Int f
-
-                                Err e ->
-                                    Value.Nil
-
-                        DataType.Int ->
-                            case intValue of
-                                Ok f ->
-                                    Value.Int f
-
-                                Err e ->
-                                    Value.Nil
-
-                        DataType.Bigint ->
-                            case intValue of
-                                Ok f ->
-                                    Value.Int f
-
-                                Err e ->
-                                    Value.Nil
-
-                        _ ->
+                        Nothing ->
                             Value.Nil
             in
             { model | editValue = Just value }
@@ -920,39 +925,44 @@ update msg model =
 
                 value =
                     case dataType of
-                        DataType.Double ->
-                            case floatValue of
-                                Ok f ->
-                                    Value.Double f
+                        Just dt ->
+                            case dt of
+                                DataType.Double ->
+                                    case floatValue of
+                                        Ok f ->
+                                            Value.Double f
 
-                                Err e ->
+                                        Err e ->
+                                            Value.Nil
+
+                                DataType.Float ->
+                                    case floatValue of
+                                        Ok f ->
+                                            Value.Float f
+
+                                        Err e ->
+                                            Value.Nil
+
+                                DataType.Real ->
+                                    case floatValue of
+                                        Ok f ->
+                                            Value.Float f
+
+                                        Err e ->
+                                            Value.Nil
+
+                                DataType.Numeric ->
+                                    case floatValue of
+                                        Ok f ->
+                                            Value.BigDecimal f
+
+                                        Err e ->
+                                            Value.Nil
+
+                                _ ->
                                     Value.Nil
 
-                        DataType.Float ->
-                            case floatValue of
-                                Ok f ->
-                                    Value.Float f
-
-                                Err e ->
-                                    Value.Nil
-
-                        DataType.Real ->
-                            case floatValue of
-                                Ok f ->
-                                    Value.Float f
-
-                                Err e ->
-                                    Value.Nil
-
-                        DataType.Numeric ->
-                            case floatValue of
-                                Ok f ->
-                                    Value.BigDecimal f
-
-                                Err e ->
-                                    Value.Nil
-
-                        _ ->
+                        Nothing ->
                             Value.Nil
             in
             { model | editValue = Just value }
@@ -965,34 +975,39 @@ update msg model =
 
                 value =
                     case dataType of
-                        DataType.Double ->
-                            case String.toFloat v of
-                                Ok f ->
-                                    Value.Double f
+                        Just dt ->
+                            case dt of
+                                DataType.Double ->
+                                    case String.toFloat v of
+                                        Ok f ->
+                                            Value.Double f
 
-                                Err e ->
-                                    Value.Nil
+                                        Err e ->
+                                            Value.Nil
 
-                        DataType.Float ->
-                            case String.toFloat v of
-                                Ok f ->
-                                    Value.Float f
+                                DataType.Float ->
+                                    case String.toFloat v of
+                                        Ok f ->
+                                            Value.Float f
 
-                                Err e ->
-                                    Value.Nil
+                                        Err e ->
+                                            Value.Nil
 
-                        DataType.Int ->
-                            case String.toInt v of
-                                Ok f ->
-                                    Value.Int f
+                                DataType.Int ->
+                                    case String.toInt v of
+                                        Ok f ->
+                                            Value.Int f
 
-                                Err e ->
-                                    Value.Nil
+                                        Err e ->
+                                            Value.Nil
 
-                        DataType.Uuid ->
-                            Value.Uuid v
+                                DataType.Uuid ->
+                                    Value.Uuid v
 
-                        _ ->
+                                _ ->
+                                    Value.Text v
+
+                        Nothing ->
                             Value.Text v
             in
             { model | editValue = Just value }
@@ -1054,10 +1069,14 @@ update msg model =
             let
                 updatedModel =
                     { model | containerScroll = scroll }
-                (updatedModel2, subCmd2) = updateDropdownDisplay (DropdownDisplay.ContainerScrollChanged scroll) updatedModel
-                (updatedModel3, subCmd3) = updateFixDropdown (FixDropdown.ContainerScrollChanged scroll) updatedModel2
+
+                ( updatedModel2, subCmd2 ) =
+                    updateDropdownDisplay (DropdownDisplay.ContainerScrollChanged scroll) updatedModel
+
+                ( updatedModel3, subCmd3 ) =
+                    updateFixDropdown (FixDropdown.ContainerScrollChanged scroll) updatedModel2
             in
-                updatedModel3 => Cmd.batch [subCmd2, subCmd3]
+            updatedModel3 => Cmd.batch [ subCmd2, subCmd3 ]
 
         LookupChanged lookup ->
             { model | lookup = lookup }
@@ -1083,7 +1102,6 @@ updateDropdownDisplay dropdownMsg model =
             { model | widget = TableDropdown updatedDropdown }
                 => Cmd.map (DropdownDisplayMsg updatedDropdown) subCmd
 
-
         _ ->
             model => Cmd.none
 
@@ -1098,6 +1116,7 @@ updateFixDropdown dropdownMsg model =
             in
             { model | widget = FixDropdown updatedDropdown }
                 => Cmd.map (FixDropdownMsg updatedDropdown) subCmd
+
         _ ->
             model => Cmd.none
 

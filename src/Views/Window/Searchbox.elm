@@ -268,28 +268,33 @@ createSearchbox model =
                     Field.dataType field
             in
             case dataType of
-                DataType.Tinyint ->
-                    numberSearch styles value1String
+                Just dt ->
+                    case dt of
+                        DataType.Tinyint ->
+                            numberSearch styles value1String
 
-                DataType.Smallint ->
-                    numberSearch styles value1String
+                        DataType.Smallint ->
+                            numberSearch styles value1String
 
-                DataType.Int ->
-                    numberSearch styles value1String
+                        DataType.Int ->
+                            numberSearch styles value1String
 
-                DataType.Text ->
-                    textSearch styles value1String
+                        DataType.Text ->
+                            textSearch styles value1String
 
-                DataType.Varchar ->
-                    textSearch styles value1String
+                        DataType.Varchar ->
+                            textSearch styles value1String
 
-                DataType.Uuid ->
-                    textSearch styles value1String
+                        DataType.Uuid ->
+                            textSearch styles value1String
 
-                DataType.Numeric ->
-                    textSearch styles value1String
+                        DataType.Numeric ->
+                            textSearch styles value1String
 
-                _ ->
+                        _ ->
+                            Debug.crash ("Primary url search data type, not yet handled for " ++ toString dataType)
+
+                Nothing ->
                     Debug.crash ("Primary url search data type, not yet handled for " ++ toString dataType)
 
         TableLookupDropdown ->

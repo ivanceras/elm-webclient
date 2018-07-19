@@ -675,7 +675,12 @@ viewColumnWithSearchbox model field =
         searchValue =
             case condition of
                 Just condition ->
-                    Filter.get columnName condition
+                    case columnName of
+                        Just columnName ->
+                            Filter.get columnName condition
+
+                        Nothing ->
+                            Nothing
 
                 Nothing ->
                     Nothing
@@ -1023,10 +1028,20 @@ update msg model =
                     case searchValue of
                         -- remove the filter for a column when search value is empty
                         Just "" ->
-                            Query.removeFromFilter columnName query
+                            case columnName of
+                                Just columnName ->
+                                    Query.removeFromFilter columnName query
+
+                                Nothing ->
+                                    query
 
                         Just searchValue ->
-                            Query.putToFilter columnName searchValue query
+                            case columnName of
+                                Just columnName ->
+                                    Query.putToFilter columnName searchValue query
+
+                                Nothing ->
+                                    query
 
                         Nothing ->
                             query
