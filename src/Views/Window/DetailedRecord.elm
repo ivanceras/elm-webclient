@@ -47,6 +47,8 @@ import Views.Window.Row as Row
 import Views.Window.Tab as Tab
 import Views.Window.Toolbar as Toolbar
 import Window as BrowserWindow exposing (Size)
+import Ionicon
+import Ionicon.Ios as IoniconIos
 
 
 {-| Example:
@@ -722,6 +724,10 @@ view model =
 
         containerWidth =
             allotedWidth + 50
+
+        iconColor =
+            Constant.iconColor
+        iconSize = 40
     in
     div
         [ class "detailed-selected-row animated fadeInDown"
@@ -743,7 +749,7 @@ view model =
                     [ class "window-cmd-close"
                     , onClick ClickedCloseButton
                     ]
-                    [ i [ class "fa fa-times-circle-o fa-2x" ] [] ]
+                    [ Ionicon.closeCircled iconSize iconColor ]
                 ]
             , Toolbar.viewForDetailRecord toolbarModel
                 |> Html.map ToolbarMsg
@@ -764,10 +770,8 @@ view model =
                     [ onMouseDown
                     , class "detail-separator"
                     ]
-                    [ i
-                        [ class "icon icon-dot-3"
-                        ]
-                        []
+                    [
+                        IoniconIos.more iconSize iconColor
                     ]
                 , viewDetailTabs model
                 ]

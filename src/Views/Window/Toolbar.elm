@@ -277,7 +277,7 @@ view tabType model =
             [ class "btn btn-large btn-default tooltip"
             , flexStyle
             ]
-            [ i [ class "toolbar-fa " ]
+            [ i [ class "toolbar-fa" ]
                 [ Ionicon.funnel iconSize iconColor ]
             , text "Clear"
                 |> viewIf showText
@@ -299,7 +299,7 @@ view tabType model =
             , onClick ToggleMultiSort
             ]
             [ div []
-                [ i [ class "toolbar-fa fa " ]
+                [ i [ class "toolbar-fa" ]
                     [ MaterialEditor.format_list_numbered iconColor iconSize ]
                 , input
                     [ type_ "checkbox"

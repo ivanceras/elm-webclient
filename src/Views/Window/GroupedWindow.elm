@@ -102,7 +102,7 @@ textSearch model =
             Constant.iconColor
 
         iconSize =
-            Constant.columnSearchIconSize
+            20
 
         windowSearch =
             case model.windowSearch of
@@ -114,7 +114,7 @@ textSearch model =
     in
     div [ class "window-filter" ]
         [ div [ class "filter-icon-wrapper" ]
-            [ div [ class "fa filter-value-icon" ]
+            [ div [ class "filter-value-icon" ]
                 [ Ionicon.search iconSize iconColor ]
             ]
         , input

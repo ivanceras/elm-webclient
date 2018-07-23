@@ -25,6 +25,7 @@ import Html.Attributes exposing (class, classList, id, style)
 import Html.Events exposing (onClick)
 import Http
 import Ionicon
+import Ionicon.Android as IoniconAndroid
 import Page.Errored as Errored exposing (PageLoadError, pageLoadError)
 import Request.Auth as Auth
 import Request.Window
@@ -188,10 +189,21 @@ view session model =
                 not model.isDetailedRecordMaximized
             else
                 True
+
+        iconSize = 20
+        iconColor = Constant.iconColor
+
+        toggleIcon = 
+            if model.isWindowListHidden then
+                IoniconAndroid.menu  iconSize iconColor
+            else
+                IoniconAndroid.arrowBack iconSize iconColor
     in
     div [ class "window" ]
         [ viewBanner model
-        , button [ class "sidebar-control", onClick (ToggleWindowList (not model.isWindowListHidden)) ] [ text "<<" ]
+        , button [ class "sidebar-control"
+                , onClick (ToggleWindowList (not model.isWindowListHidden)) ] 
+                [ toggleIcon ]
         , div [ class "window-content" ]
             [ div [ class "pane-group" ]
                 [ GroupedWindow.view model.groupedWindow

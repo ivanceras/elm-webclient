@@ -7,6 +7,8 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Util exposing ((=>), Scroll, onScroll, px, viewIf)
 import Vendor
+import Ionicon
+import Color
 
 
 type alias Model =
@@ -77,6 +79,12 @@ viewInputButton styles model =
 
                 Nothing ->
                     ""
+
+        iconSize =
+            14
+
+        iconColor =
+            Color.black
     in
     div [ class "dropdown-input" ]
         [ input
@@ -90,7 +98,7 @@ viewInputButton styles model =
             [ onClick ToggleDropdown
             , onBlur CloseDropdown
             ]
-            [ i [ class "fa fa-caret-down" ] []
+            [ Ionicon.arrowDownB iconSize iconColor
             ]
         ]
 

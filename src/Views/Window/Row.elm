@@ -196,7 +196,7 @@ viewCopyControl recordId tab =
         , onClick ClickedCopyRecord
         ]
         [ div [ class "duplicate-record tooltip" ]
-            [ div [ class "fa " ]
+            [ div [ ]
                 [ MaterialContent.content_copy iconColor iconSize ]
             , span [ class "tooltip-text" ]
                 [ text "Copy" ]
@@ -262,7 +262,7 @@ viewRecordDetail recordId tab =
         , onClick ClickedDetailedLink
         , Route.href (Route.WindowArena (WindowArena.initArgWithRecordId tab.tableName recordIdString))
         ]
-        [ div [ class "fa" ]
+        [ div [ class "icon" ]
             [ Ionicon.edit iconSize iconColor ]
         , span [ class "tooltip-text" ]
             [ text "Edit" ]

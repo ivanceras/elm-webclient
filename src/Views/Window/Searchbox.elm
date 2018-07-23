@@ -65,10 +65,8 @@ textSearch styles searchValue =
             Constant.columnSearchIconSize
     in
     div [ class "column-filter" ]
-        [ div [ class "filter-icon-wrapper" ]
-            [ div [ class "fa filter-value-icon" ]
-                [ Ionicon.search iconSize iconColor ]
-            ]
+        [ i [ class "filter-value-icon" ]
+              [ Ionicon.search iconSize iconColor ]
         , input
             [ class "filter-value"
             , styles
@@ -91,7 +89,7 @@ numberSearch styles searchValue =
     in
     div [ class "column-filter" ]
         [ i
-            [ class "fa filter-value-icon" ]
+            [ class "filter-value-icon" ]
             [ Ionicon.search iconSize iconColor ]
         , input
             [ class "filter-value"

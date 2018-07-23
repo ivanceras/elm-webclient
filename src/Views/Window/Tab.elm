@@ -600,9 +600,6 @@ viewFrozenHead model =
         ]
         [ div [ class "frozen-head-indicator" ]
             [ div [] [ text itemsIndicator ]
-            , div [ class "sort-order-reset" ]
-                [ i [ class "fa fa-circle-thin" ] []
-                ]
             ]
         , div
             [ class "frozen-head-controls" ]
@@ -612,8 +609,6 @@ viewFrozenHead model =
                 , checked False
                 ]
                 []
-            , div [ class "filter-btn" ]
-                [ i [ class "fa fa-filter" ] [] ]
             ]
         ]
 
@@ -761,15 +756,18 @@ viewColumn isMultiSort field sort =
 
 viewSortOrder : Bool -> Maybe ( Int, Order.Direction ) -> List (Html Msg)
 viewSortOrder isMultiSort sortOrder =
+    let iconSize = 14
+        iconColor = Constant.iconColor
+    in
     case sortOrder of
         Just ( sortOrder, direction ) ->
             [ div [ class "column-sort" ]
                 [ div [ class "sort-btn asc" ]
-                    [ i [ class "fa fa-sort-asc" ] []
+                    [ Ionicon.arrowUpA iconSize iconColor
                     ]
                     |> viewIf (direction == Order.ASC)
                 , div [ class "sort-btn desc" ]
-                    [ i [ class "fa fa-sort-desc" ] []
+                    [ Ionicon.arrowDownA iconSize iconColor 
                     ]
                     |> viewIf (direction == Order.DESC)
                 ]
