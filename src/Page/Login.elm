@@ -25,8 +25,8 @@ import Views.Form as Form
 
 type alias Model =
     { errors : List Error
-    , username: String
-    , password: String
+    , username : String
+    , password : String
     , settings : Settings
     }
 
@@ -68,7 +68,7 @@ viewForm =
             , onInput SetUsername
             ]
             []
-        , Form.input
+        , Form.password
             [ class "form-control-lg"
             , placeholder "password"
             , onInput SetPassword
@@ -111,22 +111,26 @@ update msg model =
                         => NoOp
 
         SetUsername username ->
-            let updatedModel ={ model
-                | username = username
-                , settings = Settings.setUsername model.settings username
-            }
+            let
+                updatedModel =
+                    { model
+                        | username = username
+                        , settings = Settings.setUsername model.settings username
+                    }
             in
-                updatedModel
+            updatedModel
                 => Cmd.none
                 => NoOp
 
         SetPassword password ->
-            let updatedModel = { model
-                | password = password
-                , settings = Settings.setPassword model.settings password
-            }
+            let
+                updatedModel =
+                    { model
+                        | password = password
+                        , settings = Settings.setPassword model.settings password
+                    }
             in
-                updatedModel
+            updatedModel
                 => Cmd.none
                 => NoOp
 
@@ -135,15 +139,16 @@ update msg model =
                 errorMessages =
                     case error of
                         Http.BadStatus response ->
-                            let _ = Debug.log "Its a bad status"
+                            let
+                                _ =
+                                    Debug.log "Its a bad status"
                             in
                             response.body
-
 
                         _ ->
                             "unable to process registration"
             in
-            { model | errors = [Form => errorMessages] }
+            { model | errors = [ Form => errorMessages ] }
                 => Cmd.none
                 => NoOp
 
